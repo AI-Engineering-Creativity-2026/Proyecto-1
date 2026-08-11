@@ -53,17 +53,17 @@ No crees directorios vacíos. Agrega una carpeta cuando tenga una responsabilida
 
 ## Comandos para testear y buildear
 
-Cuando exista el `package.json` raíz, estos son los scripts obligatorios y los comandos que se deben ejecutar antes de abrir un PR:
+Cuando existan `package.json` y `bun.lock` en la raíz, estos son los scripts obligatorios y los comandos que se deben ejecutar antes de abrir un PR:
 
 ```bash
-npm ci
-npm run lint
-npm run typecheck
-npm run test:coverage
-npm run build
+bun ci
+bun run lint
+bun run typecheck
+bun run test:coverage
+bun run build
 ```
 
-`test:coverage` debe ejecutar la suite y fallar si no se alcanza el umbral configurado. La CI usa estos mismos comandos: no sustituyas un script por una instrucción manual ni lo elimines sin actualizar el workflow y esta guía.
+`bun ci` exige que `package.json` y `bun.lock` estén sincronizados. `test:coverage` debe ejecutar la suite y fallar si no se alcanza el umbral configurado. La CI usa estos mismos comandos: no sustituyas un script por una instrucción manual ni lo elimines sin actualizar el workflow y esta guía.
 
 ## Guías de estilo de código
 

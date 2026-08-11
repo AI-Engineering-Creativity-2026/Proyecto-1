@@ -34,26 +34,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: 1.3.3
 
       - name: Instalar dependencias reproduciblemente
-        run: npm ci
+        run: bun ci
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Comprobación de tipos
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Pruebas y cobertura
-        run: npm run test:coverage
+        run: bun run test:coverage
 
       - name: Build
-        run: npm run build
+        run: bun run build
 
   bootstrap-pendiente:
     needs: detectar-proyecto
@@ -63,4 +62,4 @@ jobs:
       - name: Informar estado de bootstrap
         run: |
           echo "Aún no hay package.json en la raíz."
-          echo "Al agregarlo, defina lint, typecheck, test:coverage y build para activar las verificaciones de CI."
+          echo "Al agregar package.json y bun.lock, defina lint, typecheck, test:coverage y build para activar las verificaciones de CI."

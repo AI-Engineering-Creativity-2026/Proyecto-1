@@ -14,25 +14,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configurar Node.js y registro npm
-        uses: actions/setup-node@v4
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-          cache: npm
+          bun-version: 1.3.3
 
       - name: Instalar dependencias reproduciblemente
-        run: npm ci
+        run: bun ci
 
       - name: Verificar versión del tag
         shell: bash
         run: |
-          test "${GITHUB_REF_NAME#v}" = "$(node -p \"require('./package.json').version\")"
+          test "${GITHUB_REF_NAME#v}" = "$(bun -e \"console.log(require('./package.json').version)\")"
 
       - name: Build de distribución
-        run: npm run build
+        run: bun run build
 
       - name: Publicar paquete
-        run: npm publish
+        run: bun publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
