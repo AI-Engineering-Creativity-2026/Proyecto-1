@@ -1,0 +1,38 @@
+name: Distribuir SDK
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publicar-npm:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js y registro npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Instalar dependencias reproduciblemente
+        run: npm ci
+
+      - name: Verificar versión del tag
+        shell: bash
+        run: |
+          test "${GITHUB_REF_NAME#v}" = "$(node -p \"require('./package.json').version\")"
+
+      - name: Build de distribución
+        run: npm run build
+
+      - name: Publicar paquete
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

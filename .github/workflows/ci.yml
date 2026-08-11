@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  detectar-proyecto:
+    runs-on: ubuntu-latest
+    outputs:
+      node: ${{ steps.proyecto.outputs.node }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: proyecto
+        name: Detectar proyecto Node.js
+        shell: bash
+        run: |
+          if [[ -f package.json ]]; then
+            echo "node=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "node=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  calidad:
+    needs: detectar-proyecto
+    if: needs.detectar-proyecto.outputs.node == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias reproduciblemente
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Comprobación de tipos
+        run: npm run typecheck
+
+      - name: Pruebas y cobertura
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+  bootstrap-pendiente:
+    needs: detectar-proyecto
+    if: needs.detectar-proyecto.outputs.node != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Informar estado de bootstrap
+        run: |
+          echo "Aún no hay package.json en la raíz."
+          echo "Al agregarlo, defina lint, typecheck, test:coverage y build para activar las verificaciones de CI."
