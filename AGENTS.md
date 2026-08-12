@@ -1,4 +1,4 @@
-## Contexto y fuentes de verdad
+## Vistazo general
 
 - El producto es un *widget* embebible de chat para clientes de AGIChat.
 - El flujo visual debe respetar el [wireframe de Penpot](https://design.penpot.app/#/view?file-id=3be9e5e1-190f-8090-8008-6e79481381ed&page-id=3be9e5e1-190f-8090-8008-6e79481381ee&section=interactions&index=0&share-id=81f57451-85cc-819d-8008-6e8de838718a). La paleta y el estilo son libres, pero no se deben cambiar los flujos o estados de UX sin acuerdo del equipo.
@@ -51,7 +51,21 @@ docs/               # arquitectura, contribución y decisiones de diseño
 
 No crees directorios vacíos. Agrega una carpeta cuando tenga una responsabilidad concreta y al menos un archivo.
 
-## Convenciones de implementación
+## Comandos para testear y buildear
+
+Cuando existan `package.json` y `bun.lock` en la raíz, estos son los scripts obligatorios y los comandos que se deben ejecutar antes de abrir un PR:
+
+```bash
+bun ci
+bun run lint
+bun run typecheck
+bun run test:coverage
+bun run build
+```
+
+`bun ci` exige que `package.json` y `bun.lock` estén sincronizados. `test:coverage` debe ejecutar la suite y fallar si no se alcanza el umbral configurado. La CI usa estos mismos comandos: no sustituyas un script por una instrucción manual ni lo elimines sin actualizar el workflow y esta guía.
+
+## Guías de estilo de código
 
 - Usa TypeScript estricto; evita `any`, *casts* inseguros y estado implícito.
 - Prefiere funciones pequeñas, nombres descriptivos y retornos tipados en las interfaces públicas.
@@ -61,7 +75,7 @@ No crees directorios vacíos. Agrega una carpeta cuando tenga una responsabilida
 - Implementa la latencia y el error determinista (`__force_error__`) en el mock para permitir pruebas repetibles.
 - No añadas persistencia de historial o `localStorage` en fase 1 sin una decisión documentada.
 
-## Pruebas y calidad
+## Instrucciones para testear
 
 - Toda lógica nueva o modificada debe llevar pruebas. Prioriza el contrato WebSocket, las transiciones de `useChat`, reconexión/backoff, reintento, sanitización/render de Markdown y estados visibles de UI.
 - Mantén como mínimo 80% de cobertura global (líneas, funciones, ramas y sentencias cuando la herramienta lo permita). No reduzcas el umbral para hacer pasar CI.
@@ -84,4 +98,8 @@ No crees directorios vacíos. Agrega una carpeta cuando tenga una responsabilida
 4. Implementa junto con sus pruebas y actualiza documentación cuando cambie una interfaz, estructura o decisión arquitectónica.
 5. Ejecuta las verificaciones disponibles y reporta exactamente qué se ejecutó y qué no pudo verificarse.
 
-No incluyas secretos, tokens, URLs privadas ni llaves de agentes en el repositorio. Usa variables de entorno documentadas mediante un archivo de ejemplo sin valores reales.
+## Estándares de seguridad
+
+- No incluyas secretos, tokens, URLs privadas ni llaves de agentes en el repositorio. Usa variables de entorno documentadas mediante un archivo de ejemplo sin valores reales.
+- Valida los mensajes entrantes del WebSocket antes de usarlos y nunca renderices Markdown no sanitizado.
+- No expongas detalles internos, trazas de error ni datos de conversaciones al usuario final.
