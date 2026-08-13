@@ -38,6 +38,7 @@
         "@vue/eslint-config-typescript": "^14.9.0",
         "@vue/test-utils": "^2.4.11",
         "@vue/tsconfig": "^0.9.1",
+        "bun-types": "latest",
         "eslint": "^10.7.0",
         "eslint-plugin-oxlint": "~1.73.0",
         "eslint-plugin-vue": "~10.9.2",
