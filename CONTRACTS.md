@@ -73,7 +73,7 @@ Lo que el composable de Vue (`useChat`) expone hacia los componentes visuales. L
 ### 2.1 Tipos
 
 ```typescript
-// core/src/types/chat.ts
+// packages/core/src/types/chat.ts
 
 export interface Message {
   id: string;
@@ -99,7 +99,7 @@ export interface ChatState {
 ### 2.2 API del composable
 
 ```typescript
-// core/src/composables/useChat.ts
+// packages/core/src/composables/useChat.ts
 
 export interface UseChatOptions {
   conversationId: string;

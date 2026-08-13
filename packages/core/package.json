@@ -1,0 +1,8 @@
+{
+  "name": "@agichat/core",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "vue": "rc"
+  }
+}

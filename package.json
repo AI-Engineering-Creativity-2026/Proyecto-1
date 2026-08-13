@@ -1,0 +1,22 @@
+{
+  "name": "agichat",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "packages/*",
+    "widget"
+  ],
+  "scripts": {
+    "build": "bun --cwd widget build",
+    "dev": "bun --cwd widget dev",
+    "dev:server": "bun --cwd server dev",
+    "dev:widget": "bun --cwd widget dev",
+    "lint": "bun --cwd widget lint",
+    "build:widget": "bun --cwd widget build",
+    "test:coverage": "bun --cwd widget test:unit --coverage",
+    "test:widget": "bun --cwd widget test:unit",
+    "typecheck": "bun --cwd widget type-check",
+    "typecheck:widget": "bun --cwd widget type-check"
+  }
+}
