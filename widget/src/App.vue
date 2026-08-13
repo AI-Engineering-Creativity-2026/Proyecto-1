@@ -1,11 +1,24 @@
 <script setup lang="ts"></script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <main class="app-shell">
+    <h1>AGIChat UI</h1>
+    <p>Widget shell ready for Core and SDK wiring.</p>
+  </main>
 </template>
 
-<style scoped></style>
+<style scoped>
+.app-shell {
+  display: grid;
+  gap: 0.75rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+p {
+  margin: 0;
+}
+</style>
