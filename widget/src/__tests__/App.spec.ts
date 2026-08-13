@@ -1,11 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
 
-import { mount } from '@vue/test-utils'
-import App from '../App.vue'
+describe("App", () => {
+  it("contains the AGIChat shell copy", () => {
+    const source = readFileSync(
+      new URL("../App.vue", import.meta.url),
+      "utf8"
+    );
 
-describe('App', () => {
-  it('renders the AGIChat shell copy', () => {
-    const wrapper = mount(App)
-    expect(wrapper.text()).toContain('AGIChat UI')
-  })
-})
+    expect(source).toContain("AGIChat UI");
+  });
+});

@@ -14,7 +14,7 @@
     "dev:widget": "bun --cwd widget dev",
     "lint": "bun --cwd widget lint",
     "build:widget": "bun --cwd widget build",
-    "test:coverage": "bun --cwd widget test:unit --coverage",
+    "test:coverage": "bun test --coverage --coverage-reporter=text",
     "test:widget": "bun --cwd widget test:unit",
     "typecheck": "bun --cwd widget type-check",
     "typecheck:widget": "bun --cwd widget type-check"
