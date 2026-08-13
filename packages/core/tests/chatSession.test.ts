@@ -81,6 +81,10 @@ class FakeWebSocket implements WebSocketLike {
     this.dispatch("message", { data });
   }
 
+  emitMessageEvent(event: unknown): void {
+    this.dispatch("message", event);
+  }
+
   private dispatch(type: "open" | "message" | "close" | "error", event: unknown): void {
     for (const listener of this.listeners.get(type) ?? []) {
       listener(event);
@@ -102,6 +106,65 @@ function createIdFactory(): () => string {
 }
 
 describe("createChatSession", () => {
+  it("uses the default socket factory and scheduler while validating incoming payloads", () => {
+    const createdSockets: FakeWebSocket[] = [];
+    const originalWebSocket = globalThis.WebSocket;
+
+    class NativeFakeWebSocket extends FakeWebSocket {
+      constructor(url: string) {
+        super(url);
+        createdSockets.push(this);
+      }
+    }
+
+    try {
+      globalThis.WebSocket = NativeFakeWebSocket as unknown as typeof WebSocket;
+
+      const session = createChatSession({
+        conversationId: "conv-1",
+        apiUrl: "ws://mock",
+      });
+
+      expect(createdSockets).toHaveLength(1);
+      createdSockets[0].open();
+
+      session.sendMessage("   ");
+
+      expect(session.state.value.status).toBe("error");
+      expect(session.state.value.error).toBe("El mensaje no puede estar vacío.");
+
+      session.clearError();
+      expect(session.state.value.status).toBe("idle");
+      expect(session.state.value.error).toBeNull();
+
+      createdSockets[0].emitMessageEvent({});
+      createdSockets[0].emitMessage("not-json");
+      createdSockets[0].emitMessage(
+        JSON.stringify({
+          type: "unknown",
+          conversationId: "conv-1",
+          timestamp: "2026-08-13T10:00:01.000Z",
+        })
+      );
+
+      session.sendMessage("Hola");
+      createdSockets[0].emitMessage(
+        JSON.stringify({
+          type: "error",
+          conversationId: "conv-1",
+          error: { code: "forced", message: "fallo controlado" },
+          timestamp: "2026-08-13T10:00:02.000Z",
+        })
+      );
+
+      expect(session.state.value.status).toBe("error");
+      expect(session.state.value.error).toBe("fallo controlado");
+      expect(session.state.value.messages[0]).toMatchObject({ status: "error" });
+    } finally {
+      globalThis.WebSocket = originalWebSocket;
+    }
+  });
+
   it("sends user messages and appends incoming agent messages", () => {
     const sockets: FakeWebSocket[] = [];
     const scheduler = new ManualScheduler();
