@@ -10,13 +10,12 @@
 La solución tiene tres capas desacopladas:
 
 ```text
-Mock API (Elysia + TypeBox) <─ WebSocket JSON ─> Core (Vue composable) <─ props/events ─> UI (componentes Vue)
+Mock API (Elysia + TypeBox) <─ WebSocket JSON ─> Core (Vue composable) <─ props/events ─> widget (componentes Vue + API pública)
 ```
 
 - **Mock API:** valida y emite los eventos del contrato. Es intercambiable por el agente real; no debe contener lógica de presentación ni guardar historial.
 - **Core:** centraliza socket, reconexión, estado y reintentos. Mantiene el historial solamente en memoria. No renderiza HTML/Markdown ni accede al DOM.
-- **UI:** recibe datos y acciones del Core mediante props/eventos. No abre WebSockets ni conoce su protocolo. Es responsable de transformar el Markdown del agente a HTML seguro.
-- **SDK:** expone únicamente la inicialización y destrucción documentadas en `CONTRACTS.md`; configura el montaje del widget y genera `conversationId` si falta.
+- **widget:** recibe datos y acciones del Core mediante props/eventos. No abre WebSockets ni conoce su protocolo. Es responsable de transformar el Markdown del agente a HTML seguro y exponer `window.AGIChat`.
 
 No importes componentes de UI desde Core ni dependencias del servidor en el cliente. Mantén los tipos compartidos en un lugar neutral y evita duplicar literales de eventos o estados.
 
@@ -30,20 +29,18 @@ server/
     schemas/        # TypeBox y tipos del protocolo WebSocket
     handlers/       # comportamiento del Mock API
   tests/
-core/
-  src/
-    composables/    # useChat y conexión WebSocket
-    types/          # estado y tipos del dominio
-    services/       # adaptadores de transporte, si son necesarios
+packages/
+  core/
+    src/
+      composables/    # useChat y conexión WebSocket
+      types/          # estado y tipos del dominio
+      services/       # adaptadores de transporte, si son necesarios
   tests/
-ui/
+widget/
   src/
     components/     # vista del widget y componentes pequeños
     composables/    # comportamiento estrictamente visual
     styles/
-  tests/
-sdk/
-  src/              # montaje y API pública window.AGIChat
   tests/
 docs/               # arquitectura, contribución y decisiones de diseño
 .github/workflows/  # CI/CD de GitHub Actions

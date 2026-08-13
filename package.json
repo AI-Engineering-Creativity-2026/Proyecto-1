@@ -1,24 +1,22 @@
 {
-  "name": "agichat-monorepo",
+  "name": "agichat",
   "private": true,
   "type": "module",
   "workspaces": [
     "server",
-    "core",
-    "ui",
-    "sdk"
+    "packages/*",
+    "widget"
   ],
   "scripts": {
-    "build": "bun --cwd ui build",
-    "dev": "bun --cwd server dev",
+    "build": "bun --cwd widget build",
+    "dev": "bun --cwd widget dev",
     "dev:server": "bun --cwd server dev",
-    "dev:ui": "bun --cwd ui dev",
-    "lint": "bun --cwd ui lint",
-    "build:ui": "bun --cwd ui build",
-    "lint:ui": "bun --cwd ui lint",
-    "test:coverage": "bun --cwd ui test:unit --coverage",
-    "test:ui": "bun --cwd ui test:unit",
-    "typecheck": "bun --cwd ui type-check",
-    "typecheck:ui": "bun --cwd ui type-check"
+    "dev:widget": "bun --cwd widget dev",
+    "lint": "bun --cwd widget lint",
+    "build:widget": "bun --cwd widget build",
+    "test:coverage": "bun --cwd widget test:unit --coverage",
+    "test:widget": "bun --cwd widget test:unit",
+    "typecheck": "bun --cwd widget type-check",
+    "typecheck:widget": "bun --cwd widget type-check"
   }
 }
