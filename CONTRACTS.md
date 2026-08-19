@@ -60,7 +60,7 @@ export type IncomingMessage = typeof IncomingMessageSchema.static;
 
 ### 1.3 Decisiones acordadas
 
-- **Streaming vs mensaje completo:** se define aquí una vez que el equipo lo decida en la sesión de contrato. *(placeholder — actualizar tras la reunión)*
+- **Streaming vs mensaje completo:** se acordó **mensaje completo**. El agente responde con un único evento `agent_message` que contiene el markdown completo, precedido por `agent_typing` mientras se genera. No se implementa streaming token-por-token en fase 1.
 - **Simulación de latencia:** el Mock API debe esperar un delay aleatorio (ej. 500ms–2000ms) antes de responder, y emitir `agent_typing` durante ese lapso, para que UI pueda probar sus estados de carga.
 - **Simulación de errores:** el Mock API debe tener un modo/flag para forzar un `error` de forma predecible (ej. si el mensaje contiene la palabra `"__force_error__"`), para que UI y Core puedan testear el estado de error sin depender del azar.
 

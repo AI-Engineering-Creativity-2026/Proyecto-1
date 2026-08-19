@@ -4,5 +4,8 @@
   "type": "module",
   "dependencies": {
     "vue": "rc"
+  },
+  "scripts": {
+    "test": "bun test"
   }
 }
