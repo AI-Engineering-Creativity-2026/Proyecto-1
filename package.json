@@ -18,5 +18,12 @@
     "test:widget": "bun --cwd widget test:unit",
     "typecheck": "bun --cwd widget type-check",
     "typecheck:widget": "bun --cwd widget type-check"
+  },
+  "module": "index.ts",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
   }
 }
