@@ -4,6 +4,8 @@ declare module "*.vue" {
   export default component;
 }
 
+declare module "*.css";
+
 declare module "vue" {
   export interface Ref<T> {
     value: T;
