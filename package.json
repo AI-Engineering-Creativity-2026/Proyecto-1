@@ -8,13 +8,14 @@
     "widget"
   ],
   "scripts": {
-    "build": "bun --cwd widget build",
+    "build": "bun --cwd server build && bun --cwd widget build",
     "dev": "bun --cwd widget dev",
     "dev:server": "bun --cwd server dev",
     "dev:widget": "bun --cwd widget dev",
     "lint": "bun --cwd widget lint",
     "build:widget": "bun --cwd widget build",
-    "test:coverage": "bun test --coverage --coverage-reporter=text",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov && bun scripts/check-coverage.ts",
+    "test:server": "bun --cwd server test",
     "test:widget": "bun --cwd widget test:unit",
     "typecheck": "bun --cwd widget type-check",
     "typecheck:widget": "bun --cwd widget type-check"

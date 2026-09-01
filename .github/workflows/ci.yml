@@ -51,6 +51,9 @@ jobs:
       - name: Pruebas y cobertura
         run: bun run test:coverage
 
+      - name: Pruebas del servidor
+        run: bun run test:server
+
       - name: Build
         run: bun run build
 

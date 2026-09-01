@@ -1,12 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
+
+import { readFixture } from "../../../test/helpers/read-fixture";
 
 describe("App", () => {
   it("offers controls for every visual state", () => {
-    const source = readFileSync(
-      new URL("../App.vue", import.meta.url),
-      "utf8"
-    );
+    const source = readFixture(new URL("../App.vue", import.meta.url));
 
     expect(source).toContain('{ label: "Conversation", value: "conversation" }');
     expect(source).toContain('{ label: "Empty", value: "empty" }');
@@ -15,10 +13,7 @@ describe("App", () => {
   });
 
   it("renders the chat panel and launcher", () => {
-    const source = readFileSync(
-      new URL("../App.vue", import.meta.url),
-      "utf8"
-    );
+    const source = readFixture(new URL("../App.vue", import.meta.url));
 
     expect(source).toContain("<ChatPanel");
     expect(source).toContain("chat-launcher");
