@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
 
-const panelSource = readFileSync(
+import { readFixture } from "../../../test/helpers/read-fixture";
+
+const panelSource = readFixture(
   new URL("../components/ChatPanel.vue", import.meta.url),
-  "utf8",
 );
 
 describe("ChatPanel visual states", () => {

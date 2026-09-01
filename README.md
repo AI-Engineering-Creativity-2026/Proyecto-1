@@ -77,6 +77,9 @@ bun run test:coverage
 bun run build
 ```
 
+La CI aplica un gate mínimo de 80% para líneas, funciones y ramas a partir del reporte
+LCOV generado por Bun. Los helpers compartidos de pruebas viven en `test/helpers/`.
+
 Comandos útiles por paquete:
 
 ```bash

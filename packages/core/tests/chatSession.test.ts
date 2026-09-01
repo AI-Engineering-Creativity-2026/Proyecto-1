@@ -85,6 +85,10 @@ class FakeWebSocket implements WebSocketLike {
     this.dispatch("message", event);
   }
 
+  emitError(): void {
+    this.dispatch("error", {});
+  }
+
   private dispatch(type: "open" | "message" | "close" | "error", event: unknown): void {
     for (const listener of this.listeners.get(type) ?? []) {
       listener(event);
@@ -300,5 +304,89 @@ describe("createChatSession", () => {
       content: "Retry me",
     });
     expect(session.state.value.messages[0]).toMatchObject({ status: "sent" });
+  });
+
+  it("queues a message while connecting and sends it when the socket opens", () => {
+    const sockets: FakeWebSocket[] = [];
+    const session = createChatSession(
+      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      {
+        socketFactory: createSocketFactory(sockets),
+        now: () => "2026-08-13T10:00:00.000Z",
+        createId: createIdFactory(),
+      },
+    );
+
+    session.sendMessage("Queued");
+
+    expect(sockets[0].sent).toHaveLength(0);
+    sockets[0].open();
+
+    expect(sockets[0].sent).toHaveLength(1);
+    expect(session.state.value.messages[0]).toMatchObject({ status: "sent" });
+  });
+
+  it("handles transport errors and ignores an error without a pending message", () => {
+    const sockets: FakeWebSocket[] = [];
+    const session = createChatSession(
+      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      { socketFactory: createSocketFactory(sockets) },
+    );
+
+    sockets[0].open();
+    sockets[0].emitError();
+
+    expect(session.state.value.error).toContain("transporte");
+
+    sockets[0].emitMessage(
+      JSON.stringify({
+        type: "error",
+        conversationId: "conv-1",
+        timestamp: "2026-08-13T10:00:00.000Z",
+      }),
+    );
+
+    expect(session.state.value.messages).toHaveLength(0);
+  });
+
+  it("accepts an agent message without content and ignores retry without a candidate", () => {
+    const sockets: FakeWebSocket[] = [];
+    const session = createChatSession(
+      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      { socketFactory: createSocketFactory(sockets) },
+    );
+
+    session.retryLastMessage();
+    sockets[0].open();
+    sockets[0].emitMessage(
+      JSON.stringify({
+        type: "agent_message",
+        conversationId: "conv-1",
+        timestamp: "2026-08-13T10:00:00.000Z",
+      }),
+    );
+
+    expect(session.state.value.messages[0]).toMatchObject({
+      role: "agent",
+      content: "",
+    });
+    expect(session.state.value.status).toBe("idle");
+  });
+
+  it("does not reconnect after disposal and clears pending backoff", () => {
+    const sockets: FakeWebSocket[] = [];
+    const scheduler = new ManualScheduler();
+    const session = createChatSession(
+      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      { socketFactory: createSocketFactory(sockets), scheduler },
+    );
+
+    sockets[0].open();
+    session.sendMessage("Dispose");
+    sockets[0].close();
+    session.dispose();
+
+    expect(scheduler.delays).toEqual([]);
+    expect(() => scheduler.runNext()).toThrow("No hay timers pendientes");
   });
 });
