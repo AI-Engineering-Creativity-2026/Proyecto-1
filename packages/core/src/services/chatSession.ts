@@ -213,11 +213,14 @@ export function createChatSession(
   }
 
   function closeSocket(): void {
-    socket?.removeEventListener("open", handleOpen);
-    socket?.removeEventListener("message", handleMessage);
-    socket?.removeEventListener("close", handleClose);
-    socket?.removeEventListener("error", handleError);
-    socket = null;
+    if (socket) {
+      socket.removeEventListener("open", handleOpen);
+      socket.removeEventListener("message", handleMessage);
+      socket.removeEventListener("close", handleClose);
+      socket.removeEventListener("error", handleError);
+      socket.close();
+      socket = null;
+    }
   }
 
   function scheduleReconnect(): void {
