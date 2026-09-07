@@ -6,7 +6,7 @@ import { createChatSession } from "../services/chatSession";
 
 export interface UseChatOptions {
   conversationId: string;
-  apiUrl: string;
+  apiUrl?: string;
 }
 
 export interface UseChatReturn {
@@ -16,8 +16,11 @@ export interface UseChatReturn {
   clearError: () => void;
 }
 
-export function useChat(_options: UseChatOptions): UseChatReturn {
-  const session = createChatSession(_options);
+export function useChat(options: UseChatOptions): UseChatReturn {
+  const session = createChatSession({
+    conversationId: options.conversationId,
+    apiUrl: options.apiUrl ?? "ws://localhost:3000/ws",
+  });
 
   onScopeDispose(session.dispose);
 
