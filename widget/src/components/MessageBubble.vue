@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { Message } from "../../../packages/core/src/types/chat";
+import type { Message } from "@agichat/core";
 
+import { renderMarkdown } from "../utils/markdown";
 import AgentAvatar from "./AgentAvatar.vue";
 
 defineProps<{
@@ -20,8 +21,7 @@ function formatTime(timestamp: string): string {
   <article class="message" :class="`message--${message.role}`">
     <AgentAvatar v-if="message.role === 'agent'" label="Nova" />
     <div class="message__content">
-      <div class="message__bubble">
-        <p>{{ message.content }}</p>
+      <div class="message__bubble markdown-content" v-html="renderMarkdown(message.content)">
       </div>
       <div class="message__meta">
         <span>{{ formatTime(message.timestamp) }}</span>

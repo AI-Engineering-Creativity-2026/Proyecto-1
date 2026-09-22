@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@agichat/core": "workspace:*",
+    "dompurify": "^3.2.6",
+    "marked": "^16.3.0",
     "vue": "rc"
   },
   "devDependencies": {

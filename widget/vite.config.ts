@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@agichat/core': fileURLToPath(new URL('../packages/core/src', import.meta.url)),
     },
   },
 })

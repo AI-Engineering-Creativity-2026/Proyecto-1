@@ -7,22 +7,22 @@ const panelSource = readFixture(
 );
 
 describe("ChatPanel visual states", () => {
-  it("renders the empty state with mock suggestions", () => {
-    expect(panelSource).toContain("demoState === 'empty'");
-    expect(panelSource).toContain("mockSuggestions");
+  it("renders the empty state with actionable suggestions", () => {
+    expect(panelSource).toContain("!hasMessages && state.status !== 'error'");
+    expect(panelSource).toContain("const suggestions");
     expect(panelSource).toContain("<SuggestionButton");
   });
 
   it("renders loading feedback and disables the composer", () => {
     expect(panelSource).toContain("<TypingIndicator");
-    expect(panelSource).toContain(":disabled=\"demoState === 'loading'\"");
+    expect(panelSource).toContain(":disabled=\"isWaiting\"");
   });
 
   it("renders a recoverable error", () => {
     expect(panelSource).toContain('class="error-card"');
-    expect(panelSource).toContain("mockErrorMessage");
+    expect(panelSource).toContain("state.error");
     expect(panelSource).toContain("Try again");
-    expect(panelSource).toContain("$emit('changeState', 'loading')");
+    expect(panelSource).toContain("retryMessage");
   });
 
   it("composes the visual primitives", () => {
