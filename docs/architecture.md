@@ -146,7 +146,8 @@ El monorepo está organizado utilizando workspaces de Bun:
 │       └── release.yml       # Pipeline CD: publicación automatizada por tags
 ├── docs/                     # Documentación de arquitectura y diseño
 │   ├── images/
-│   │   └── wireframe.png     # Wireframe de referencia UX
+│   │   ├── wireframe.png     # Wireframe de referencia UX
+│   │   └── widget-preview.png # Captura de la interfaz final implementada
 │   └── architecture.md       # Este documento de arquitectura
 ├── packages/
 │   └── core/                 # Lógica de dominio y composable agnóstico
