@@ -60,8 +60,9 @@ docs/               # notas de arquitectura y decisiones
   images/           # recursos visuales de referencia, como el wireframe
 ```
 
-## Contratos importantes
+## Documentación y contratos
 
+- [`docs/architecture.md`](./docs/architecture.md) contiene la justificación arquitectónica completa, diagramas en Mermaid.js y la guía para nuevos desarrolladores sobre cómo escalar el proyecto.
 - [`CONTRACTS.md`](./CONTRACTS.md) define el contrato entre Mock API, Core y UI.
 - [`AGENTS.md`](./AGENTS.md) define reglas de colaboración, estructura y límites por capa.
 
