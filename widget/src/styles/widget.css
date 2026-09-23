@@ -168,19 +168,9 @@ button {
 }
 
 .chat-header p {
-  display: flex;
-  gap: 0.32rem;
-  align-items: center;
   margin: 0;
   color: var(--muted);
   font-size: 0.71rem;
-}
-
-.chat-header p span {
-  width: 5px;
-  height: 5px;
-  background: #54a270;
-  border-radius: 50%;
 }
 
 .chat-header > button {
@@ -211,7 +201,9 @@ button {
 
 .agent-avatar {
   position: relative;
-  display: inline-grid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
   width: 36px;
   height: 36px;
@@ -219,7 +211,6 @@ button {
   background: #dce9dc;
   border: 1px solid #cddccb;
   border-radius: 13px;
-  place-items: center;
 }
 
 .agent-avatar--large {
@@ -230,7 +221,9 @@ button {
 }
 
 .agent-avatar svg {
+  display: block;
   width: 82%;
+  height: 82%;
   overflow: visible;
 }
 
@@ -256,13 +249,10 @@ button {
 }
 
 .agent-avatar__status {
-  position: relative;
-  grid-area: 1 / 1;
-  align-self: end;
-  justify-self: end;
-  z-index: 1;
+  position: absolute;
   right: -2px;
   bottom: -2px;
+  z-index: 1;
   width: 10px;
   height: 10px;
   background: #55a871;
