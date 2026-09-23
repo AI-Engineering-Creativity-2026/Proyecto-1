@@ -25,6 +25,22 @@ La imagen de referencia está versionada dentro del repo para que el equipo la t
 La paleta, tipografía y estilo visual pueden cambiar, pero los flujos y estados de UX deben
 respetar esta referencia salvo que el equipo acuerde una modificación explícita.
 
+## Interfaz final implementada
+
+A continuación se muestra el resultado final del widget integrado y su entorno de demostración:
+
+![Vista previa del widget implementado](./docs/images/widget-preview.png)
+
+### Características clave de la interfaz:
+- **Diseño responsive adaptable**: En pantallas de escritorio y monitores amplios aprovecha el espacio horizontal mediante una distribución en dos columnas (hero/introducción a la izquierda y panel de chat a la derecha), adaptándose automáticamente a una columna fluida en tablets y móviles.
+- **Experiencia de usuario y estados del wireframe**:
+  - **Estado inicial**: Pantalla de bienvenida con avatar y sugerencias clicables (*quick replies*).
+  - **Conversación en tiempo real**: Mensajes diferenciados para usuario y agente con marcas de tiempo en la hora local del sistema.
+  - **Feedback de respuesta**: Indicador animado de tipeo (*typing indicator*) y deshabilitación preventiva del compositor mientras el agente responde.
+  - **Manejo de errores**: Tarjeta de alerta informativa con botón de reintento (*Try again*) ante fallos de conexión.
+- **Renderizado seguro de Markdown**: Las respuestas del agente se formatean con Markdown enriquecido y saneado estricto contra vulnerabilidades XSS (vía DOMPurify).
+- **Acceso flotante (*Launcher*)**: Botón inferior para abrir y minimizar el widget con animaciones fluidas preservando el historial en memoria durante la sesión.
+
 ## Arquitectura
 
 ```mermaid
@@ -60,8 +76,9 @@ docs/               # notas de arquitectura y decisiones
   images/           # recursos visuales de referencia, como el wireframe
 ```
 
-## Contratos importantes
+## Documentación y contratos
 
+- [`docs/architecture.md`](./docs/architecture.md) contiene la justificación arquitectónica completa, diagramas en Mermaid.js y la guía para nuevos desarrolladores sobre cómo escalar el proyecto.
 - [`CONTRACTS.md`](./CONTRACTS.md) define el contrato entre Mock API, Core y UI.
 - [`AGENTS.md`](./AGENTS.md) define reglas de colaboración, estructura y límites por capa.
 

@@ -46,7 +46,7 @@ function retryMessage(): void {
         <AgentAvatar label="Nova" online />
         <div>
           <h2>Nova</h2>
-          <p><span aria-hidden="true"></span> Online · Replies instantly</p>
+          <p>Online · Replies instantly</p>
         </div>
       </div>
       <button type="button" aria-label="Close chat" @click="emit('close')">
