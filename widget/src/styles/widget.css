@@ -123,9 +123,8 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 40vw;
-  min-width: 360px;
-  max-width: 720px;
+  width: 100%;
+  max-width: 640px;
 }
 
 .chat-panel {
@@ -134,7 +133,7 @@ button {
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: 100%;
   height: min(640px, calc(100vh - 8rem));
-  min-height: 500px;
+  min-height: 480px;
   overflow: hidden;
   background: var(--paper);
   border: 1px solid rgb(24 54 43 / 8%);
@@ -471,7 +470,8 @@ button {
 
 .suggestions {
   display: grid;
-  gap: 0.48rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.55rem;
   width: 100%;
 }
 
@@ -826,6 +826,74 @@ button {
   .panel-leave-to {
     opacity: 0;
     transform: translateY(12px);
+  }
+}
+
+@media (min-width: 960px) {
+  .demo-shell {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(2.5rem, 5vw, 6rem);
+    padding: 2.5rem clamp(2rem, 5vw, 5rem);
+    min-height: 100vh;
+  }
+
+  .demo-intro {
+    flex: 1 1 420px;
+    max-width: 600px;
+    text-align: left;
+    margin: 0;
+  }
+
+  .demo-intro h1 {
+    margin: 1rem 0 1.25rem;
+    font-size: clamp(2.8rem, 4.5vw, 4.8rem);
+    line-height: 1.02;
+  }
+
+  .demo-intro > p:not(.demo-kicker) {
+    margin-left: 0;
+    margin-right: 0;
+    font-size: 1.15rem;
+    line-height: 1.6;
+  }
+
+  .widget-stage {
+    flex: 1 1 480px;
+    width: 100%;
+    max-width: 580px;
+    align-items: flex-end;
+  }
+
+  .chat-panel {
+    width: 100%;
+    height: min(680px, calc(100vh - 6rem));
+    min-height: 520px;
+  }
+
+  .chat-launcher {
+    margin-top: 1rem;
+    margin-right: 0.5rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .demo-shell {
+    gap: clamp(4rem, 6vw, 8rem);
+    padding: 3rem 6rem;
+  }
+
+  .demo-intro {
+    max-width: 680px;
+  }
+
+  .widget-stage {
+    max-width: 620px;
+  }
+
+  .chat-panel {
+    height: min(720px, calc(100vh - 6rem));
   }
 }
 
