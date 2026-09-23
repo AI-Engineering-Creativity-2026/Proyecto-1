@@ -14,7 +14,7 @@
     "dev:widget": "bun --cwd widget dev",
     "lint": "bun --cwd widget lint",
     "build:widget": "bun --cwd widget build",
-    "test:coverage": "bun test --coverage --coverage-reporter=lcov && bun scripts/check-coverage.ts",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov && bun --cwd widget test:integration && bun scripts/check-coverage.ts",
     "test:server": "bun --cwd server test",
     "test:widget": "bun --cwd widget test:unit",
     "typecheck": "bun --cwd widget type-check",

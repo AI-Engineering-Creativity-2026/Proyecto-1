@@ -6,7 +6,7 @@ const previewRoot = document.getElementById("app");
 if (previewRoot) {
   init({
     containerId: previewRoot.id,
-    apiUrl: "mock://widget-preview",
+    apiUrl: "ws://localhost:3000/ws",
     conversationId: "widget-preview",
   });
 }

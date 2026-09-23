@@ -8,6 +8,7 @@
     "build": "bun run type-check && bun run build-only",
     "preview": "node ../node_modules/.bun/node_modules/vite/bin/vite.js preview",
     "test:unit": "bun test",
+    "test:integration": "node ../node_modules/.bun/node_modules/vitest/vitest.mjs run --config vitest.config.ts",
     "build-only": "node ../scripts/build-widget.mjs",
     "type-check": "bun ../node_modules/.bun/typescript@6.0.3/node_modules/typescript/bin/tsc -p tsconfig.typecheck.json",
     "lint": "bun run lint:oxlint && bun run lint:eslint",
@@ -16,6 +17,8 @@
   },
   "dependencies": {
     "@agichat/core": "workspace:*",
+    "dompurify": "^3.2.6",
+    "marked": "^16.3.0",
     "vue": "rc"
   },
   "devDependencies": {

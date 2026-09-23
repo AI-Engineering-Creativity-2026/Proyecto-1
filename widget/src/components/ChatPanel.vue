@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import { mockErrorMessage, mockMessages, mockSuggestions } from "../mock/chat";
-import type { DemoState } from "../types/ui";
+import type { ChatState } from "@agichat/core";
 import AgentAvatar from "./AgentAvatar.vue";
 import ChatComposer from "./ChatComposer.vue";
 import MessageBubble from "./MessageBubble.vue";
@@ -10,31 +9,38 @@ import SuggestionButton from "./SuggestionButton.vue";
 import TypingIndicator from "./TypingIndicator.vue";
 
 const props = defineProps<{
-  demoState: DemoState;
+  state: ChatState;
+  sendMessage: (text: string) => void;
+  retryLastMessage: () => void;
+  clearError: () => void;
 }>();
 
 const emit = defineEmits<{
   close: [];
-  changeState: [state: DemoState];
 }>();
 
 const composerValue = ref("");
-const visibleMessages = computed(() =>
-  props.demoState === "loading" ? mockMessages.slice(0, 2) : mockMessages,
-);
+const isWaiting = computed(() => props.state.status === "waiting_response");
+const hasMessages = computed(() => props.state.messages.length > 0);
+const suggestions = [
+  "Explain my latest invoice",
+  "Update my account details",
+  "Talk to a support specialist",
+] as const;
 
-function useSuggestion(suggestion: string): void {
-  composerValue.value = suggestion;
+function submitMessage(message: string): void {
+  composerValue.value = "";
+  props.sendMessage(message);
 }
 
-function sendMockMessage(): void {
-  composerValue.value = "";
-  emit("changeState", "loading");
+function retryMessage(): void {
+  props.clearError();
+  props.retryLastMessage();
 }
 </script>
 
 <template>
-  <section class="chat-panel" :data-state="demoState" aria-label="Chat with Nova">
+  <section class="chat-panel" :data-state="state.status" aria-label="Chat with Nova">
     <header class="chat-header">
       <div class="chat-header__identity">
         <AgentAvatar label="Nova" online />
@@ -43,7 +49,7 @@ function sendMockMessage(): void {
           <p><span aria-hidden="true"></span> Online · Replies instantly</p>
         </div>
       </div>
-      <button type="button" aria-label="Close chat" @click="$emit('close')">
+      <button type="button" aria-label="Close chat" @click="emit('close')">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m7 7 10 10M17 7 7 17" />
         </svg>
@@ -51,7 +57,7 @@ function sendMockMessage(): void {
     </header>
 
     <div class="chat-body" aria-live="polite">
-      <div v-if="demoState === 'empty'" class="empty-state">
+      <div v-if="!hasMessages && state.status !== 'error'" class="empty-state">
         <AgentAvatar label="Nova" size="large" />
         <div class="empty-state__copy">
           <p class="eyebrow">YOUR AI GUIDE</p>
@@ -60,10 +66,10 @@ function sendMockMessage(): void {
         </div>
         <div class="suggestions" aria-label="Suggested questions">
           <SuggestionButton
-            v-for="suggestion in mockSuggestions"
+            v-for="suggestion in suggestions"
             :key="suggestion"
             :label="suggestion"
-            @select="useSuggestion"
+            @select="submitMessage"
           />
         </div>
       </div>
@@ -72,14 +78,14 @@ function sendMockMessage(): void {
         <div class="conversation-date"><span>Today</span></div>
         <div class="message-list">
           <MessageBubble
-            v-for="message in visibleMessages"
+            v-for="message in state.messages"
             :key="message.id"
             :message="message"
           />
-          <TypingIndicator v-if="demoState === 'loading'" />
+          <TypingIndicator v-if="isWaiting" />
         </div>
 
-        <div v-if="demoState === 'error'" class="error-card" role="alert">
+        <div v-if="state.status === 'error' && state.error" class="error-card" role="alert">
           <span class="error-card__icon" aria-hidden="true">
             <svg viewBox="0 0 20 20">
               <path d="M10 6v4.5M10 14h.01" />
@@ -88,8 +94,8 @@ function sendMockMessage(): void {
           </span>
           <div>
             <strong>Message not sent</strong>
-            <p>{{ mockErrorMessage }}</p>
-            <button type="button" @click="$emit('changeState', 'loading')">
+            <p>{{ state.error }}</p>
+            <button type="button" @click="retryMessage">
               Try again
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M13 7a5 5 0 1 0-1.3 4.7M13 3.5V7H9.5" />
@@ -102,9 +108,9 @@ function sendMockMessage(): void {
 
     <footer class="chat-footer">
       <ChatComposer
-        :disabled="demoState === 'loading'"
+        :disabled="isWaiting"
         :initial-value="composerValue"
-        @submit="sendMockMessage"
+        @submit="submitMessage"
       />
       <p>Powered by <strong>AGIChat</strong></p>
     </footer>
