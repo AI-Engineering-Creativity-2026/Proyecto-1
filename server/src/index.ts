@@ -6,7 +6,7 @@ export function createApp() {
   const handler = createChatHandler();
 
   return new Elysia()
-    .get("/", () => ({
+    .get("/health", () => ({
       service: "agichat-mock-api",
       status: "ok",
     }))
@@ -24,6 +24,18 @@ export function createApp() {
           }, 750);
         }
       },
+    })
+    .get("/", () => Bun.file(new URL("../public/index.html", import.meta.url)))
+    .get("/*", ({ request, set }) => {
+      const pathname = new URL(request.url).pathname;
+      const relativePath = pathname.slice(1);
+
+      if (!relativePath || relativePath.includes("..")) {
+        set.status = 404;
+        return "Not found";
+      }
+
+      return Bun.file(new URL(`../public/${relativePath}`, import.meta.url));
     });
 }
 
