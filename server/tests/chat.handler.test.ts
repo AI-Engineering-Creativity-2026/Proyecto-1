@@ -10,9 +10,9 @@ const validMessage = {
 };
 
 describe("createChatHandler", () => {
-  it("emits typing and a complete markdown response", () => {
+  it("emits typing and a complete markdown response", async () => {
     const handler = createChatHandler();
-    const responses = handler.onOutgoingMessage(validMessage);
+    const responses = await handler.onOutgoingMessage(validMessage);
 
     expect(responses).toHaveLength(2);
     expect(responses[0]).toMatchObject({
@@ -26,9 +26,9 @@ describe("createChatHandler", () => {
     });
   });
 
-  it("emits a deterministic error for the forced error marker", () => {
+  it("emits a deterministic error for the forced error marker", async () => {
     const handler = createChatHandler();
-    const responses = handler.onOutgoingMessage({
+    const responses = await handler.onOutgoingMessage({
       ...validMessage,
       content: "__force_error__",
     });
@@ -39,5 +39,32 @@ describe("createChatHandler", () => {
       conversationId: "conversation-1",
       error: { code: "FORCED_ERROR" },
     });
+  });
+
+  it("emits poster and UI action fixtures from deterministic markers", async () => {
+    const handler = createChatHandler();
+    const responses = await handler.onOutgoingMessage({
+      ...validMessage,
+      content: "__poster__ __open_imdb__",
+    });
+
+    expect(responses).toHaveLength(3);
+    expect(responses[1]).toMatchObject({ type: "ui_action", action: { source: "imdb" } });
+    expect(responses[2]).toMatchObject({
+      type: "agent_message",
+      attachments: [{ type: "poster", url: "https://image.tmdb.org/t/p/w500/mock-poster.jpg" }],
+      providers: ["tmdb"],
+    });
+  });
+
+  it("converts an unresponsive agent into AGENT_TIMEOUT", async () => {
+    const handler = createChatHandler(
+      { respond: () => new Promise(() => {}) },
+      { agentTimeoutMs: 0 },
+    );
+
+    const responses = await handler.onOutgoingMessage(validMessage);
+
+    expect(responses[0]).toMatchObject({ type: "error", error: { code: "AGENT_TIMEOUT" } });
   });
 });
