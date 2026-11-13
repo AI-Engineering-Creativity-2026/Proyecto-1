@@ -9,6 +9,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@agichat/contracts": "workspace:*",
     "elysia": "latest"
   },
   "devDependencies": {

@@ -43,7 +43,7 @@ class MockWebSocket implements WebSocketLike {
 }
 
 describe("useChat", () => {
-  it("initializes with reactive state, satisfies UseChatReturn contract and defaults apiUrl", () => {
+  it("initializes with reactive state and requires the configured apiUrl", () => {
     const sockets: MockWebSocket[] = [];
     const originalWebSocket = globalThis.WebSocket;
 
@@ -61,6 +61,7 @@ describe("useChat", () => {
       const chat = scope.run(() =>
         useChat({
           conversationId: "conv-use-chat-1",
+          apiUrl: "ws://localhost:3000/ws",
         })
       );
 
@@ -75,7 +76,6 @@ describe("useChat", () => {
       expect(typeof chat.retryLastMessage).toBe("function");
       expect(typeof chat.clearError).toBe("function");
 
-      // Verify default apiUrl connects to the real server default endpoint
       expect(sockets).toHaveLength(1);
       expect(sockets[0].url).toBe("ws://localhost:3000/ws");
 

@@ -14,13 +14,21 @@
     "packages/core": {
       "name": "@agichat/core",
       "dependencies": {
+        "@agichat/contracts": "workspace:*",
         "vue": "rc",
+      },
+    },
+    "packages/contracts": {
+      "name": "@agichat/contracts",
+      "dependencies": {
+        "@sinclair/typebox": "^0.34.52",
       },
     },
     "server": {
       "name": "@agichat/server",
       "version": "1.0.50",
       "dependencies": {
+        "@agichat/contracts": "workspace:*",
         "elysia": "latest",
       },
       "devDependencies": {
@@ -65,6 +73,8 @@
   },
   "packages": {
     "@agichat/core": ["@agichat/core@workspace:packages/core"],
+
+    "@agichat/contracts": ["@agichat/contracts@workspace:packages/contracts"],
 
     "@agichat/server": ["@agichat/server@workspace:server"],
 

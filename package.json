@@ -14,14 +14,14 @@
     "dev:server": "bun --cwd server dev",
     "dev:widget": "bun --cwd widget dev",
     "lint": "bun --cwd widget lint",
+    "lint:fix": "bun --cwd widget lint:fix",
     "build:widget": "bun --cwd widget build",
-    "test:coverage": "bun test --coverage --coverage-reporter=lcov && bun --cwd widget test:integration && bun scripts/check-coverage.ts",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov && bun --cwd widget test:coverage && bun scripts/check-coverage.ts",
     "test:server": "bun --cwd server test",
     "test:widget": "bun --cwd widget test:unit",
     "typecheck": "bun --cwd widget type-check",
     "typecheck:widget": "bun --cwd widget type-check"
   },
-  "module": "index.ts",
   "devDependencies": {
     "@types/bun": "latest"
   },

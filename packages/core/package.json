@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@agichat/contracts": "workspace:*",
     "vue": "rc"
   },
   "scripts": {

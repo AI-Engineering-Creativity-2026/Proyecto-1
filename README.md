@@ -70,7 +70,7 @@ packages/
 widget/
   src/
     components/     # componentes visuales del widget
-    composables/    # comportamiento estrictamente visual
+      utils/          # renderizado y sanitización de Markdown
     styles/         # estilos del widget
 docs/               # notas de arquitectura y decisiones
   images/           # recursos visuales de referencia, como el wireframe
@@ -94,8 +94,9 @@ bun run test:coverage
 bun run build
 ```
 
-La CI aplica un gate mínimo de 80% para líneas, funciones y ramas a partir del reporte
-LCOV generado por Bun. Los helpers compartidos de pruebas viven en `test/helpers/`.
+La CI aplica un gate mínimo de 80% para líneas, funciones, ramas y sentencias a partir
+de los reportes LCOV de Bun y Vitest. El reporte de Vitest incluye componentes `.vue`.
+Los helpers compartidos de pruebas viven en `test/helpers/`.
 
 Comandos útiles por paquete:
 

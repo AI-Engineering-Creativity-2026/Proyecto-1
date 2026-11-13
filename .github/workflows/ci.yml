@@ -56,13 +56,3 @@ jobs:
 
       - name: Build
         run: bun run build
-
-  bootstrap-pendiente:
-    needs: detectar-proyecto
-    if: needs.detectar-proyecto.outputs.node != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Informar estado de bootstrap
-        run: |
-          echo "Aún no hay package.json en la raíz."
-          echo "Al agregar package.json y bun.lock, defina lint, typecheck, test:coverage y build para activar las verificaciones de CI."

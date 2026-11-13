@@ -122,7 +122,7 @@ La arquitectura de AGIChat fue diseñada con los siguientes principios y justifi
 2. **Core (`packages/core/`)**: Paquete TypeScript puro que exporta el composable `useChat` y el motor `ChatSession`.
    - *Justificación*: Centraliza la máquina de estados del chat, la conexión WebSocket, el manejo de reconexiones con retroceso exponencial (*exponential backoff*), la cola de mensajes mientras conecta y la lógica de reintentos (`retryLastMessage()`). Al ser agnóstico del DOM y de la renderización HTML, puede ser reutilizado en cualquier aplicación web, CLI o móvil en el futuro.
 3. **Widget (`widget/`)**: Implementado en Vue 3 y empaquetado como **Web Component** estándar (`defineCustomElement`) junto con la API global `window.AGIChat`.
-   - *Justificación*: Permite que cualquier cliente externo de Maxine integre el widget en su plataforma mediante una etiqueta `<script>` y un simple `AGIChat.init({ containerId: '...', apiUrl: '...' })`, aislando los estilos mediante Shadow DOM o clases BEM contenidas para evitar colisiones con el CSS del cliente.
+   - *Justificación*: Permite que cualquier cliente de AGIChat integre el widget en su plataforma mediante una etiqueta `<script>` y un simple `AGIChat.init({ containerId: '...', apiUrl: '...' })`, aislando los estilos mediante Shadow DOM o clases BEM contenidas para evitar colisiones con el CSS del cliente.
 
 ### 2.2 Seguridad y Renderizado de Markdown
 - El agente emite Markdown crudo. La UI procesa dicho texto mediante `marked` y lo sanea estrictamente con `DOMPurify` antes de inyectarlo en el DOM.

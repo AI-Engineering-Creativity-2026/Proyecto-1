@@ -1,4 +1,5 @@
 import { readonly, ref, type Ref } from "vue";
+import { isIncomingMessage } from "@agichat/contracts";
 
 import type { ChatState, Message } from "../types/chat";
 
@@ -65,17 +66,6 @@ interface PendingMessage {
   timestamp: string;
 }
 
-interface IncomingMessageShape {
-  type: "agent_message" | "agent_typing" | "error";
-  conversationId: string;
-  content?: string;
-  error?: {
-    code: string;
-    message: string;
-  };
-  timestamp: string;
-}
-
 const initialState = (): ChatState => ({
   messages: [],
   status: "connecting",
@@ -107,48 +97,8 @@ function cloneMessages(messages: Message[]): Message[] {
   return messages.map((message) => ({ ...message }));
 }
 
-function isIncomingMessage(value: unknown): value is IncomingMessageShape {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const candidate = value as Record<string, unknown>;
-
-  if (
-    candidate.type !== "agent_message" &&
-    candidate.type !== "agent_typing" &&
-    candidate.type !== "error"
-  ) {
-    return false;
-  }
-
-  if (typeof candidate.conversationId !== "string") {
-    return false;
-  }
-
-  if (typeof candidate.timestamp !== "string") {
-    return false;
-  }
-
-  if (
-    candidate.content !== undefined &&
-    typeof candidate.content !== "string"
-  ) {
-    return false;
-  }
-
-  if (candidate.error !== undefined) {
-    if (
-      typeof candidate.error !== "object" ||
-      candidate.error === null ||
-      typeof (candidate.error as Record<string, unknown>).code !== "string" ||
-      typeof (candidate.error as Record<string, unknown>).message !== "string"
-    ) {
-      return false;
-    }
-  }
-
-  return true;
+function isValidIsoTimestamp(timestamp: string): boolean {
+  return !Number.isNaN(Date.parse(timestamp)) && timestamp.includes("T");
 }
 
 function createUserMessage(id: string, content: string, timestamp: string): Message {
@@ -324,6 +274,14 @@ export function createChatSession(
     }
 
     if (!isIncomingMessage(parsed)) {
+      return;
+    }
+
+    if (
+      parsed.conversationId !== options.conversationId ||
+      !isValidIsoTimestamp(parsed.timestamp) ||
+      (parsed.type === "agent_message" && !parsed.content?.trim())
+    ) {
       return;
     }
 

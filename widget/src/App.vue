@@ -4,20 +4,14 @@ import { ref } from "vue";
 
 import ChatPanel from "./components/ChatPanel.vue";
 
-const props = withDefaults(
-  defineProps<{
-    apiUrl?: string;
-    conversationId?: string;
-  }>(),
-  {
-    apiUrl: "ws://localhost:3000/ws",
-    conversationId: "",
-  },
-);
+const props = defineProps<{
+  apiUrl: string;
+  conversationId: string;
+}>();
 
 const chat = useChat({
   apiUrl: props.apiUrl,
-  conversationId: props.conversationId || crypto.randomUUID(),
+  conversationId: props.conversationId,
 });
 
 const isOpen = ref(true);
