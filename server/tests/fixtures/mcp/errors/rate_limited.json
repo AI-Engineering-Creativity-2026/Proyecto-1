@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Se alcanzó el límite diario del proveedor."
+  }
+}

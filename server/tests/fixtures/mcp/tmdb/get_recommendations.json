@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "imdb_id": "tt0083658",
+      "poster_url": "https://image.tmdb.org/t/p/w500/2LqaLgk4Z226KkgPJuiOQ58tWvX.jpg",
+      "overview": "A space opera about a rebellion against an authoritarian empire.",
+      "rating": 8.7,
+      "genres": ["Adventure", "Science Fiction"],
+      "year": 1980
+    },
+    {
+      "imdb_id": "tt1375666",
+      "poster_url": "https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
+      "overview": "A specialist enters shared dreams to perform an unusual form of extraction.",
+      "rating": 8.4,
+      "genres": ["Action", "Science Fiction", "Thriller"],
+      "year": 2010
+    }
+  ]
+}

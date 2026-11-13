@@ -17,6 +17,15 @@ orígenes separados por comas; si se configura, las conexiones WebSocket de
 otros orígenes se rechazan. Consulta `.env.example` para una configuración
 local.
 
+### Credenciales locales
+
+Los valores reales deben configurarse únicamente en un archivo `.env` local,
+que está ignorado por Git. Groq usa las credenciales individuales de cada
+integrante mediante `GROQ_API_KEY`, `GROQ_MODEL` y, si aplica, `GROQ_BASE_URL`.
+TMDB separa `TMDB_API_READ_ACCESS_TOKEN` del `TMDB_API_KEY`. Google Books usa
+`GOOGLE_BOOKS_API_KEY`. Nunca copies estos valores al repositorio, a issues ni
+a los logs.
+
 ## Endpoints
 
 - `GET /health`: devuelve `{ "service": "agichat-mock-api", "status": "ok" }`.
