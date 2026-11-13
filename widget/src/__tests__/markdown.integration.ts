@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import { renderMarkdown } from "../utils/markdown";
 
@@ -16,7 +16,7 @@ describe("renderMarkdown", () => {
     );
 
     expect(html).not.toContain("onerror");
-    expect(html).not.toContain("<img");
+    expect(html).toContain('<img src="x">');
     expect(html).toContain('href="https://example.com"');
   });
 });

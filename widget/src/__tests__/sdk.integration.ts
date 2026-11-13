@@ -35,8 +35,8 @@ describe("AGIChat SDK helpers", () => {
     });
 
     expect(appendChild).toHaveBeenCalledOnce();
-    expect((appendChild.mock.calls[0]?.[0] as HTMLElement).tagName.toLowerCase()).toBe(
-      "agichat-widget",
-    );
+    const appendedElement = appendChild.mock.calls[0]?.[0];
+    expect(appendedElement).toBeDefined();
+    expect((appendedElement as HTMLElement).tagName.toLowerCase()).toBe("agichat-widget");
   });
 });

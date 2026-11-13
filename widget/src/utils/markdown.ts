@@ -1,7 +1,10 @@
 import * as DOMPurifyModule from "dompurify";
 import { marked } from "marked";
 
-const DOMPurify = (DOMPurifyModule.default ?? DOMPurifyModule) as {
+const sanitizerModule = DOMPurifyModule.default ?? DOMPurifyModule;
+const DOMPurify = (typeof sanitizerModule === "function"
+  ? sanitizerModule(globalThis.window)
+  : sanitizerModule) as {
   sanitize: (html: string, options: { USE_PROFILES: { html: boolean } }) => string;
 };
 

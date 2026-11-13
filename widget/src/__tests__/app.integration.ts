@@ -5,14 +5,14 @@ import { ref } from "vue";
 import type { ChatState } from "@agichat/core";
 
 const state: ChatState = { messages: [], status: "idle", error: null };
-const sendMessage = vi.fn();
+const sendMessage = vi.fn<() => void>();
 
 vi.mock("@agichat/core", () => ({
   useChat: () => ({
     state: ref(state),
     sendMessage,
-    retryLastMessage: vi.fn(),
-    clearError: vi.fn(),
+    retryLastMessage: vi.fn<() => void>(),
+    clearError: vi.fn<() => void>(),
   }),
 }));
 
