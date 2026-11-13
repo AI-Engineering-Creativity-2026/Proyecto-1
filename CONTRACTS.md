@@ -1,4 +1,4 @@
-# CONTRACTS.md — AGIChat Widget SDK
+# CONTRACTS.md v2 — AGIChat Widget SDK
 
 Este documento define el contrato de comunicación entre las tres capas del proyecto:
 
@@ -195,3 +195,107 @@ Se genera con `crypto.randomUUID()` al montar el widget (dentro de `AGIChat.init
 ## 5. Ownership de este archivo
 
 Este archivo vive en la raíz del repositorio y su primera versión debe salir de la sesión de acuerdo de contrato entre las 3 personas, **antes** de escribir lógica de negocio. Cambios posteriores requieren aprobación de las 3 personas vía PR, ya que afecta directamente el trabajo de las otras dos capas.
+
+---
+
+## 6. Extensiones cerradas de la Fase 2
+
+Las siguientes reglas amplían el contrato anterior sin cambiar el modelo de
+mensaje completo ni la propiedad del historial. El agente real todavía no forma
+parte de esta fase de preparación.
+
+### 6.1 Eventos y payloads servidor → Core
+
+Además de `agent_typing`, `agent_message` y `error`, el servidor puede emitir:
+
+```typescript
+interface UiActionMessage {
+  type: "ui_action";
+  conversationId: string;
+  timestamp: string;
+  action: {
+    kind: "open_url";
+    url: string;
+    source: "imdb" | "google_books";
+    reason?: string;
+  };
+}
+```
+
+`agent_message` conserva `content` como Markdown crudo y puede incluir:
+
+```typescript
+attachments?: Array<{
+  type: "poster";
+  url: string;
+  alt: string;
+  title: string;
+}>;
+providers?: ("tmdb" | "google_books")[];
+```
+
+`providers` permite mostrar atribución de las fuentes utilizadas. Core debe
+validar el evento y, por ahora, ignorar `ui_action` y sus datos visuales sin
+generar un error ni agregarlos al historial.
+
+Los códigos permitidos en `error.error.code` son:
+
+`FORCED_ERROR`, `INVALID_MESSAGE`, `BLOCKED_INPUT`, `AGENT_TIMEOUT`,
+`AGENT_ERROR`, `UPSTREAM_ERROR` y `RATE_LIMITED`.
+
+### 6.2 Límites y tiempos
+
+- `user_message.content` tiene entre 1 y 2000 caracteres.
+- El servidor responde `AGENT_TIMEOUT` después de 30 segundos si el agente no
+  responde. Se configura con `AGENT_TIMEOUT_MS`.
+- Core marca el mensaje como error si no recibe una respuesta en 45 segundos.
+  Se configura mediante `CLIENT_TIMEOUT_MS` en el adaptador del cliente.
+- El mensaje completo se mantiene; no se implementa streaming.
+
+### 6.3 Seguridad de acciones y contenido externo
+
+- `ui_action` y `attachments` los emite código del servidor, nunca texto libre
+  del modelo.
+- Las URLs se construyen en el servidor a partir de identificadores: IMDb usa
+  `https://www.imdb.com/title/{imdb_id}/` y Google Books usa
+  `https://books.google.com/books?id={volumeId}`.
+- Para `open_url` solo se permiten los hosts `www.imdb.com` y
+  `books.google.com`; para pósters solo `image.tmdb.org`. Todas las URLs deben
+  usar `https`.
+- La allowlist se valida en servidor y también en Widget. Widget solo abre una
+  URL que pasa esa validación. Si `window.open` devuelve `null` por bloqueo de
+  pop-ups, muestra un botón de enlace para que el usuario lo abra manualmente.
+- Las instrucciones y textos recibidos desde proveedores son contenido no
+  confiable y nunca deben convertirse en instrucciones del modelo.
+
+### 6.4 Contrato de herramientas MCP
+
+Los MCP servers no se implementan en este PR. Cada uno será un servicio propio
+de Docker Compose con transporte Streamable HTTP y respuestas JSON
+estructuradas.
+
+`tmdb-mcp` expone:
+
+- `search_movies({ query, year? })`
+- `get_movie_details({ movieId })` → `imdb_id`, `poster_url`, `overview`,
+  `rating`, `genres` y `year`.
+- `get_recommendations({ movieId })`
+
+`books-mcp` expone:
+
+- `search_books({ title, author? })`
+- `get_book_details({ volumeId })`
+
+Los campos `overview` y `description` son textos de terceros no confiables.
+
+### 6.5 Decisiones cerradas de Fase 2
+
+- El proveedor LLM es Groq y el modelo se configura con `GROQ_MODEL`.
+- El framework del agente será Vercel AI SDK (`ai` y `@ai-sdk/groq`), usando
+  las APIs vigentes cuando se implemente el agente.
+- La topología es multiagente centralizada/jerárquica: un Orquestador enruta al
+  Agente de Películas (TMDB) y al Agente de Comparación (película vs libro).
+- Los subagentes se expondrán como herramientas del Orquestador.
+- `tmdb-mcp` y `books-mcp` serán servicios independientes con Streamable HTTP.
+- CI nunca llama a Groq, TMDB ni Google Books; todas esas dependencias se
+  mockean en pruebas.
