@@ -1,4 +1,10 @@
-import type { IncomingMessage, OutgoingMessage } from "../schemas/chat.schema";
+import type { IncomingMessage, OutgoingMessage } from "@agichat/contracts";
+
+export type LatencyProvider = () => number;
+
+export function randomLatency(): number {
+  return Math.floor(Math.random() * 1501) + 500;
+}
 
 export interface ChatHandlerResult {
   onOutgoingMessage: (message: OutgoingMessage) => IncomingMessage[];

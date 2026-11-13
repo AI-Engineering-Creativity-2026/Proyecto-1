@@ -1,9 +1,25 @@
 import { Elysia } from "elysia";
-import { createChatHandler } from "./handlers";
-import { OutgoingMessageSchema } from "./schemas";
+import { Value } from "@sinclair/typebox/value";
+import { createChatHandler, randomLatency } from "./handlers";
+import { IncomingMessageSchema, OutgoingMessageSchema } from "./schemas";
 
-export function createApp() {
+interface AppOptions {
+  latency?: () => number;
+  allowedOrigins?: string[];
+}
+
+function genericError(conversationId: string) {
+  return {
+    type: "error" as const,
+    conversationId,
+    error: { code: "INTERNAL_ERROR", message: "No se pudo procesar el mensaje." },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export function createApp(options: AppOptions = {}) {
   const handler = createChatHandler();
+  const latency = options.latency ?? randomLatency;
 
   return new Elysia()
     .get("/health", () => ({
@@ -11,18 +27,30 @@ export function createApp() {
       status: "ok",
     }))
     .ws("/ws", {
+      beforeHandle({ request, set }) {
+        const allowedOrigins = options.allowedOrigins ?? [];
+        const origin = request.headers.get("origin");
+        if (allowedOrigins.length > 0 && (!origin || !allowedOrigins.includes(origin))) {
+          set.status = 403;
+          return "Origin not allowed";
+        }
+      },
       body: OutgoingMessageSchema,
       message(ws, message) {
         const responses = handler.onOutgoingMessage(message);
-        const [firstResponse, secondResponse] = responses;
+        responses.forEach((response, index) => {
+          const sendResponse = () => {
+            if (!Value.Check(IncomingMessageSchema, response)) {
+              console.error("Invalid outgoing WebSocket message", response);
+              ws.send(JSON.stringify(genericError(message.conversationId)));
+              return;
+            }
+            ws.send(JSON.stringify(response));
+          };
 
-        ws.send(JSON.stringify(firstResponse));
-
-        if (secondResponse) {
-          setTimeout(() => {
-            ws.send(JSON.stringify(secondResponse));
-          }, 750);
-        }
+          if (index === 0) sendResponse();
+          else setTimeout(sendResponse, latency());
+        });
       },
     })
     .get("/", () => Bun.file(new URL("../public/index.html", import.meta.url)))
@@ -40,7 +68,12 @@ export function createApp() {
 }
 
 if (import.meta.main) {
-  const app = createApp().listen(3000);
+  const port = Number(process.env.PORT ?? 3000);
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const app = createApp({ allowedOrigins }).listen(port);
 
   console.log(
     `AGIChat mock API listening at ${app.server?.hostname}:${app.server?.port}`

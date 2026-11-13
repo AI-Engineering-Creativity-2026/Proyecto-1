@@ -5,11 +5,13 @@ WORKDIR /app
 # The lockfile lives at the monorepo root. Build the server and widget together.
 COPY package.json bun.lock ./
 COPY packages/core/package.json packages/core/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
 COPY server/package.json server/package.json
 COPY widget/package.json widget/package.json
 RUN bun install --frozen-lockfile
 
 COPY packages/core packages/core
+COPY packages/contracts packages/contracts
 COPY server/src server/src
 COPY widget widget
 COPY scripts scripts
@@ -22,6 +24,7 @@ WORKDIR /app
 
 COPY package.json bun.lock ./
 COPY packages/core/package.json packages/core/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
 COPY server/package.json server/package.json
 COPY widget/package.json widget/package.json
 RUN bun install --frozen-lockfile --production --filter @agichat/server
