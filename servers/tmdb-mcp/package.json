@@ -16,6 +16,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@sinclair/typebox": "^0.34.52",
     "bun-types": "latest"
   }
 }
