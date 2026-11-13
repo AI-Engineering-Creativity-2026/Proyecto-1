@@ -9,11 +9,15 @@
     "preview": "node ../node_modules/.bun/node_modules/vite/bin/vite.js preview",
     "test:unit": "bun test",
     "test:integration": "node ../node_modules/.bun/node_modules/vitest/vitest.mjs run --config vitest.config.ts",
+    "test:coverage": "node ../node_modules/.bun/node_modules/vitest/vitest.mjs run --config vitest.config.ts --coverage",
     "build-only": "node ../scripts/build-widget.mjs",
     "type-check": "bun ../node_modules/.bun/typescript@6.0.3/node_modules/typescript/bin/tsc -p tsconfig.typecheck.json",
-    "lint": "bun run lint:oxlint && bun run lint:eslint",
-    "lint:oxlint": "../node_modules/.bun/node_modules/oxlint/bin/oxlint . --fix",
-    "lint:eslint": "node ../node_modules/.bun/node_modules/eslint/bin/eslint.js . --fix --cache"
+    "lint": "bun run lint:oxlint:check && bun run lint:eslint:check",
+    "lint:fix": "bun run lint:oxlint && bun run lint:eslint",
+    "lint:oxlint:check": "oxlint .",
+    "lint:eslint:check": "eslint . --cache",
+    "lint:oxlint": "oxlint . --fix",
+    "lint:eslint": "eslint . --fix --cache"
   },
   "dependencies": {
     "@agichat/core": "workspace:*",

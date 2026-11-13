@@ -31,8 +31,13 @@ function ensureWidgetDefined(): void {
   }
 }
 
-function createConversationId(explicitId?: string): string {
+export function createConversationId(explicitId?: string): string {
   return explicitId ?? crypto.randomUUID();
+}
+
+export function applyTheme(element: HTMLElement, theme: AGIChatConfig["theme"]): void {
+  if (theme?.primaryColor) element.style.setProperty("--agichat-primary-color", theme.primaryColor);
+  if (theme?.fontFamily) element.style.setProperty("--agichat-font-family", theme.fontFamily);
 }
 
 export function init(config: AGIChatConfig): void {
@@ -48,6 +53,7 @@ export function init(config: AGIChatConfig): void {
   const element = document.createElement(widgetTagName);
   element.setAttribute("data-api-url", config.apiUrl);
   element.setAttribute("data-conversation-id", createConversationId(config.conversationId));
+  applyTheme(element, config.theme);
   container.appendChild(element);
   mountedElement = element;
 }
