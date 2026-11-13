@@ -7,6 +7,7 @@ import { createChatSession } from "../services/chatSession";
 export interface UseChatOptions {
   conversationId: string;
   apiUrl: string;
+  clientTimeoutMs?: number;
 }
 
 export interface UseChatReturn {
@@ -20,6 +21,7 @@ export function useChat(options: UseChatOptions): UseChatReturn {
   const session = createChatSession({
     conversationId: options.conversationId,
     apiUrl: options.apiUrl,
+    responseTimeoutMs: options.clientTimeoutMs ?? 45_000,
   });
 
   onScopeDispose(session.dispose);

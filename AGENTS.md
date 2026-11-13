@@ -72,6 +72,21 @@ bun run build
 - Implementa la latencia y el error determinista (`__force_error__`) en el mock para permitir pruebas repetibles.
 - No añadas persistencia de historial o `localStorage` en fase 1 sin una decisión documentada.
 
+## Reglas de Fase 2: agente real
+
+- `AgentPort` es el único punto de entrada del agente desde el servidor. El
+  handler WebSocket no importa implementaciones concretas del agente.
+- El Orquestador y sus subagentes solo acceden a proveedores mediante las
+  herramientas MCP definidas en el contrato; no se agregan llamadas directas a
+  TMDB o Google Books.
+- Las allowlists de URLs se validan en servidor y Widget antes de abrir enlaces
+  o mostrar pósters.
+- Todo dato de herramientas y todo texto de terceros se trata como contenido
+  no confiable; no puede convertirse en una instrucción del modelo.
+- Las pruebas y la CI no llaman a Groq, TMDB ni Google Books. Usa dobles y
+  respuestas deterministas.
+- Nunca incluyas secretos en prompts, fixtures, logs o mensajes del contrato.
+
 ## Instrucciones para testear
 
 - Toda lógica nueva o modificada debe llevar pruebas. Prioriza el contrato WebSocket, las transiciones de `useChat`, reconexión/backoff, reintento, sanitización/render de Markdown y estados visibles de UI.

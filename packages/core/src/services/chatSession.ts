@@ -50,6 +50,7 @@ export interface ChatSessionDependencies {
   scheduler?: Scheduler;
   now?: () => string;
   createId?: () => string;
+  responseTimeoutMs?: number;
 }
 
 export interface ChatSession {
@@ -136,6 +137,7 @@ export function createChatSession(
   let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   let pendingMessage: PendingMessage | null = null;
   let retryCandidate: PendingMessage | null = null;
+  let responseTimeout: ReturnType<typeof setTimeout> | null = null;
 
   function patchState(patch: Partial<ChatState>): void {
     state.value = {
@@ -160,6 +162,23 @@ export function createChatSession(
 
     scheduler.clearTimeout(reconnectTimeout);
     reconnectTimeout = null;
+  }
+
+  function clearResponseTimeout(): void {
+    if (responseTimeout === null) return;
+    scheduler.clearTimeout(responseTimeout);
+    responseTimeout = null;
+  }
+
+  function scheduleResponseTimeout(): void {
+    clearResponseTimeout();
+    const timeoutMs = dependencies.responseTimeoutMs;
+    if (timeoutMs === undefined || timeoutMs <= 0) return;
+
+    responseTimeout = scheduler.setTimeout(() => {
+      responseTimeout = null;
+      markPendingAsError("El agente tardó demasiado en responder. Intenta de nuevo.");
+    }, timeoutMs);
   }
 
   function closeSocket(): void {
@@ -191,6 +210,7 @@ export function createChatSession(
   }
 
   function markPendingAsError(message: string): void {
+    clearResponseTimeout();
     if (!pendingMessage) {
       return;
     }
@@ -290,6 +310,10 @@ export function createChatSession(
       return;
     }
 
+    if (parsed.type === "ui_action") {
+      return;
+    }
+
     if (parsed.type === "error") {
       markPendingAsError(parsed.error?.message ?? "El servidor respondió con un error.");
       retryCandidate = pendingMessage ?? retryCandidate;
@@ -310,6 +334,7 @@ export function createChatSession(
 
     pendingMessage = null;
     retryCandidate = null;
+    clearResponseTimeout();
   }
 
   function handleClose(): void {
@@ -357,6 +382,7 @@ export function createChatSession(
       timestamp,
     };
     retryCandidate = pendingMessage;
+    scheduleResponseTimeout();
 
     if (!socket || socket.readyState !== 1) {
       connect();
@@ -389,6 +415,7 @@ export function createChatSession(
       content: retryMessage.content,
       timestamp,
     };
+    scheduleResponseTimeout();
 
     if (!socket || socket.readyState !== 1) {
       connect();
@@ -409,6 +436,7 @@ export function createChatSession(
   function dispose(): void {
     disposed = true;
     clearReconnectTimer();
+    clearResponseTimeout();
     closeSocket();
   }
 
