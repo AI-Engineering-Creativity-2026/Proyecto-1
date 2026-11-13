@@ -106,33 +106,48 @@ export const McpToolSchemas = {
   get_book_details: Type.Object({ volumeId: Type.String({ minLength: 1 }) }),
 } as const;
 
-export interface MovieDetails {
-  imdb_id: string | null;
-  poster_url: string | null;
-  overview: string;
-  rating: number | null;
-  genres: string[];
-  year: number | null;
-}
+export const MovieDetailsSchema = Type.Object({
+  imdb_id: Type.Union([Type.String(), Type.Null()]),
+  poster_url: Type.Union([Type.String({ format: "uri" }), Type.Null()]),
+  overview: Type.String(),
+  rating: Type.Union([Type.Number(), Type.Null()]),
+  genres: Type.Array(Type.String()),
+  year: Type.Union([Type.Integer(), Type.Null()]),
+});
 
-export interface BookDetails {
-  volumeId: string;
-  title: string;
-  authors: string[];
-  description: string;
-}
+export const BookDetailsSchema = Type.Object({
+  volumeId: Type.String({ minLength: 1 }),
+  title: Type.String({ minLength: 1 }),
+  authors: Type.Array(Type.String()),
+  description: Type.String(),
+});
 
-export interface McpToolResponses {
+export const McpToolResponseSchemas = {
   tmdb: {
-    search_movies: { results: MovieDetails[] };
-    get_movie_details: MovieDetails;
-    get_recommendations: { results: MovieDetails[] };
+    search_movies: Type.Object({ results: Type.Array(MovieDetailsSchema) }),
+    get_movie_details: MovieDetailsSchema,
+    get_recommendations: Type.Object({ results: Type.Array(MovieDetailsSchema) }),
+  },
+  books: {
+    search_books: Type.Object({ results: Type.Array(BookDetailsSchema) }),
+    get_book_details: BookDetailsSchema,
+  },
+} as const;
+
+export type MovieDetails = Type.Static<typeof MovieDetailsSchema>;
+export type BookDetails = Type.Static<typeof BookDetailsSchema>;
+export type McpToolResponses = {
+  tmdb: {
+    [K in keyof typeof McpToolResponseSchemas.tmdb]: Type.Static<
+      (typeof McpToolResponseSchemas.tmdb)[K]
+    >;
   };
   books: {
-    search_books: { results: BookDetails[] };
-    get_book_details: BookDetails;
+    [K in keyof typeof McpToolResponseSchemas.books]: Type.Static<
+      (typeof McpToolResponseSchemas.books)[K]
+    >;
   };
-}
+};
 
 export type ErrorCode = Type.Static<typeof ErrorCodeSchema>;
 export type AgentMessage = Type.Static<typeof AgentMessageSchema>;

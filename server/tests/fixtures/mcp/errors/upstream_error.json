@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "UPSTREAM_ERROR",
+    "message": "El proveedor externo no respondió."
+  }
+}
