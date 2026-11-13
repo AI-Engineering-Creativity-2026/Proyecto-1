@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { Value } from "@sinclair/typebox/value";
+import { isIncomingMessage } from "@agichat/contracts";
 import { createChatHandler, randomLatency } from "./handlers";
 import { IncomingMessageSchema, OutgoingMessageSchema } from "./schemas";
 
@@ -40,7 +40,7 @@ export function createApp(options: AppOptions = {}) {
         const responses = handler.onOutgoingMessage(message);
         responses.forEach((response, index) => {
           const sendResponse = () => {
-            if (!Value.Check(IncomingMessageSchema, response)) {
+            if (!isIncomingMessage(response)) {
               console.error("Invalid outgoing WebSocket message", response);
               ws.send(JSON.stringify(genericError(message.conversationId)));
               return;
