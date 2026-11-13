@@ -127,7 +127,7 @@ export function useChat(options: UseChatOptions): UseChatReturn;
 
 ## 3. Contrato del SDK público (inicialización)
 
-Cómo un cliente de AGIChat instala el widget en su sitio.
+Cómo un cliente externo de Maxine instala el widget en su sitio.
 
 ```typescript
 interface AGIChatConfig {
