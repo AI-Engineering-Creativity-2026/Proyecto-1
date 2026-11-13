@@ -6,6 +6,14 @@ declare module "*.vue" {
 
 declare module "*.css";
 
+interface ImportMetaEnv {
+  readonly VITE_AGICHAT_API_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 declare module "vue" {
   export interface Ref<T> {
     value: T;

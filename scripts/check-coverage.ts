@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const coverageFile = "coverage/lcov.info";
 const minimumCoverage = 80;
@@ -8,6 +8,8 @@ interface CoverageTotals {
   functionsHit: number;
   branchesFound: number;
   branchesHit: number;
+  statementsFound: number;
+  statementsHit: number;
 }
 
 function addRecordTotals(
@@ -42,6 +44,8 @@ function addRecordTotals(
     if (metric === "FNH") totals.functionsHit += value;
     if (metric === "BRF") totals.branchesFound += value;
     if (metric === "BRH") totals.branchesHit += value;
+    if (metric === "LF") totals.statementsFound += value;
+    if (metric === "LH") totals.statementsHit += value;
   }
 }
 
@@ -54,20 +58,24 @@ const totals: CoverageTotals = {
   functionsHit: 0,
   branchesFound: 0,
   branchesHit: 0,
+  statementsFound: 0,
+  statementsHit: 0,
 };
 const lines = new Map<string, boolean>();
 
 let coverage: string;
 
-try {
-  coverage = readFileSync(coverageFile, "utf8");
-} catch {
+const coverageFiles = [coverageFile, "coverage/widget/lcov.info"].filter(existsSync);
+if (coverageFiles.length === 0) {
   console.error(`No se encontró el reporte de cobertura: ${coverageFile}`);
   process.exit(1);
 }
 
-for (const record of coverage.split("end_of_record")) {
-  addRecordTotals(totals, record, lines);
+for (const file of coverageFiles) {
+  coverage = readFileSync(file, "utf8");
+  for (const record of coverage.split("end_of_record")) {
+    addRecordTotals(totals, record, lines);
+  }
 }
 
 const measures = {
@@ -77,10 +85,11 @@ const measures = {
   ),
   functions: percentage(totals.functionsHit, totals.functionsFound),
   branches: percentage(totals.branchesHit, totals.branchesFound),
+  statements: percentage(totals.statementsHit, totals.statementsFound),
 };
 
 console.log(
-  `Cobertura: líneas ${measures.lines.toFixed(2)}%, funciones ${measures.functions.toFixed(2)}%, ramas ${measures.branches.toFixed(2)}%`,
+  `Cobertura: líneas ${measures.lines.toFixed(2)}%, funciones ${measures.functions.toFixed(2)}%, ramas ${measures.branches.toFixed(2)}%, sentencias ${measures.statements.toFixed(2)}%`,
 );
 
 if (Object.values(measures).some((value) => value < minimumCoverage)) {

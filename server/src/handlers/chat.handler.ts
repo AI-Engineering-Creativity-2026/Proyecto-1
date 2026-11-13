@@ -1,41 +1,61 @@
-import type { IncomingMessage, OutgoingMessage } from "../schemas/chat.schema";
+import type { IncomingMessage, OutgoingMessage } from "@agichat/contracts";
+import { MockAgent, type AgentPort } from "../agents";
 
-export interface ChatHandlerResult {
-  onOutgoingMessage: (message: OutgoingMessage) => IncomingMessage[];
+export type LatencyProvider = () => number;
+
+export function randomLatency(): number {
+  return Math.floor(Math.random() * 1501) + 500;
 }
 
-export function createChatHandler(): ChatHandlerResult {
+export interface ChatHandlerOptions {
+  agentTimeoutMs?: number;
+}
+
+export interface ChatHandlerResult {
+  onOutgoingMessage: (message: OutgoingMessage) => Promise<IncomingMessage[]>;
+}
+
+function timeoutEvent(conversationId: string): IncomingMessage {
   return {
-    onOutgoingMessage: (message) => {
-      const timestamp = new Date().toISOString();
+    type: "error",
+    conversationId,
+    error: {
+      code: "AGENT_TIMEOUT",
+      message: "El agente tardó demasiado en responder. Intenta de nuevo.",
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
 
-      if (message.content.includes("__force_error__")) {
-        return [
-          {
-            type: "error",
-            conversationId: message.conversationId,
-            error: {
-              code: "FORCED_ERROR",
-              message: "No se pudo procesar el mensaje. Intenta de nuevo.",
-            },
-            timestamp,
-          },
-        ];
-      }
+export function createChatHandler(
+  agent: AgentPort = new MockAgent(),
+  options: ChatHandlerOptions = {},
+): ChatHandlerResult {
+  const agentTimeoutMs = options.agentTimeoutMs ?? 30_000;
+  const history: IncomingMessage[] = [];
 
-      return [
-        {
-          type: "agent_typing",
+  return {
+    onOutgoingMessage: async (message) => {
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+      const timeoutResponse = new Promise<IncomingMessage[]>((resolve) => {
+        timeoutHandle = setTimeout(
+          () => resolve([timeoutEvent(message.conversationId)]),
+          agentTimeoutMs,
+        );
+      });
+
+      const response = await Promise.race([
+        agent.respond(message, {
           conversationId: message.conversationId,
-          timestamp,
-        },
-        {
-          type: "agent_message",
-          conversationId: message.conversationId,
-          content: `Recibí tu mensaje: **${message.content}**`,
-          timestamp,
-        },
-      ];
+          history,
+        }),
+        timeoutResponse,
+      ]).finally(() => {
+        if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+      });
+
+      history.push(...response);
+      return response;
     },
   };
 }

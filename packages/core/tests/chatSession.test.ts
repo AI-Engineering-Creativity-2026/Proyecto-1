@@ -156,7 +156,7 @@ describe("createChatSession", () => {
         JSON.stringify({
           type: "error",
           conversationId: "conv-1",
-          error: { code: "forced", message: "fallo controlado" },
+          error: { code: "FORCED_ERROR", message: "fallo controlado" },
           timestamp: "2026-08-13T10:00:02.000Z",
         })
       );
@@ -349,7 +349,7 @@ describe("createChatSession", () => {
     expect(session.state.value.messages).toHaveLength(0);
   });
 
-  it("accepts an agent message without content and ignores retry without a candidate", () => {
+  it("rejects an agent message without content and ignores retry without a candidate", () => {
     const sockets: FakeWebSocket[] = [];
     const session = createChatSession(
       { conversationId: "conv-1", apiUrl: "ws://mock" },
@@ -366,11 +366,54 @@ describe("createChatSession", () => {
       }),
     );
 
-    expect(session.state.value.messages[0]).toMatchObject({
-      role: "agent",
-      content: "",
-    });
+    expect(session.state.value.messages).toHaveLength(0);
     expect(session.state.value.status).toBe("idle");
+  });
+
+  it("ignores valid ui_action events without changing chat history", () => {
+    const sockets: FakeWebSocket[] = [];
+    const session = createChatSession(
+      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      { socketFactory: createSocketFactory(sockets) },
+    );
+
+    sockets[0].open();
+    sockets[0].emitMessage(JSON.stringify({
+      type: "ui_action",
+      conversationId: "conv-1",
+      timestamp: "2026-08-13T10:00:00.000Z",
+      action: {
+        kind: "open_url",
+        url: "https://www.imdb.com/title/tt0000001/",
+        source: "imdb",
+      },
+    }));
+
+    expect(session.state.value.messages).toHaveLength(0);
+    expect(session.state.value.error).toBeNull();
+  });
+
+  it("marks the pending message as an error when the client timeout expires", () => {
+    const sockets: FakeWebSocket[] = [];
+    const scheduler = new ManualScheduler();
+    const session = createChatSession(
+      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      {
+        socketFactory: createSocketFactory(sockets),
+        scheduler,
+        responseTimeoutMs: 45_000,
+      },
+    );
+
+    sockets[0].open();
+    session.sendMessage("Timeout");
+    expect(scheduler.delays).toContain(45_000);
+
+    scheduler.runNext();
+
+    expect(session.state.value.status).toBe("error");
+    expect(session.state.value.error).toContain("demasiado");
+    expect(session.state.value.messages[0]).toMatchObject({ status: "error" });
   });
 
   it("does not reconnect after disposal and clears pending backoff", () => {

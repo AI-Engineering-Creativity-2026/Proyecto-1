@@ -2,7 +2,7 @@
   display: block;
   color: #21352e;
   background: #e9eee8;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--agichat-font-family, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -39,7 +39,7 @@ button {
   --cream: #f8f7f2;
   --paper: #ffffff;
   --sage: #dbe9dc;
-  --brand: #294f40;
+  --brand: var(--agichat-primary-color, #294f40);
   --brand-dark: #19392e;
   --accent: #e4a86a;
   display: flex;
@@ -50,7 +50,7 @@ button {
   padding: clamp(1rem, 3vw, 2rem);
   overflow: auto;
   color: var(--ink);
-  font-family: inherit;
+  font-family: var(--agichat-font-family, inherit);
   background:
     radial-gradient(circle at 14% 12%, rgb(255 255 255 / 72%) 0 8%, transparent 25%),
     linear-gradient(135deg, #eef1ea 0%, #e3eae3 56%, #d7e1da 100%);
@@ -896,4 +896,9 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+.demo-shell {
+  --agichat-primary-color: #4f46e5;
+  --agichat-font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--agichat-font-family);
 }

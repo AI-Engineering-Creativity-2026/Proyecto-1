@@ -1,1 +1,1 @@
-export { createChatHandler } from "./chat.handler";
+export { createChatHandler, randomLatency } from "./chat.handler";

@@ -23,7 +23,7 @@ describe("Core <-> Server WebSocket Integration", () => {
   let apiUrl: string;
 
   beforeAll(() => {
-    app = createApp().listen(0);
+    app = createApp({ latency: () => 0 }).listen(0);
     port = app.server?.port ?? 3000;
     apiUrl = `ws://localhost:${port}/ws`;
   });

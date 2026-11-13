@@ -1,4 +1,5 @@
 import { readonly, ref, type Ref } from "vue";
+import { isIncomingMessage } from "@agichat/contracts";
 
 import type { ChatState, Message } from "../types/chat";
 
@@ -49,6 +50,7 @@ export interface ChatSessionDependencies {
   scheduler?: Scheduler;
   now?: () => string;
   createId?: () => string;
+  responseTimeoutMs?: number;
 }
 
 export interface ChatSession {
@@ -62,17 +64,6 @@ export interface ChatSession {
 interface PendingMessage {
   id: string;
   content: string;
-  timestamp: string;
-}
-
-interface IncomingMessageShape {
-  type: "agent_message" | "agent_typing" | "error";
-  conversationId: string;
-  content?: string;
-  error?: {
-    code: string;
-    message: string;
-  };
   timestamp: string;
 }
 
@@ -107,48 +98,8 @@ function cloneMessages(messages: Message[]): Message[] {
   return messages.map((message) => ({ ...message }));
 }
 
-function isIncomingMessage(value: unknown): value is IncomingMessageShape {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const candidate = value as Record<string, unknown>;
-
-  if (
-    candidate.type !== "agent_message" &&
-    candidate.type !== "agent_typing" &&
-    candidate.type !== "error"
-  ) {
-    return false;
-  }
-
-  if (typeof candidate.conversationId !== "string") {
-    return false;
-  }
-
-  if (typeof candidate.timestamp !== "string") {
-    return false;
-  }
-
-  if (
-    candidate.content !== undefined &&
-    typeof candidate.content !== "string"
-  ) {
-    return false;
-  }
-
-  if (candidate.error !== undefined) {
-    if (
-      typeof candidate.error !== "object" ||
-      candidate.error === null ||
-      typeof (candidate.error as Record<string, unknown>).code !== "string" ||
-      typeof (candidate.error as Record<string, unknown>).message !== "string"
-    ) {
-      return false;
-    }
-  }
-
-  return true;
+function isValidIsoTimestamp(timestamp: string): boolean {
+  return !Number.isNaN(Date.parse(timestamp)) && timestamp.includes("T");
 }
 
 function createUserMessage(id: string, content: string, timestamp: string): Message {
@@ -186,6 +137,7 @@ export function createChatSession(
   let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   let pendingMessage: PendingMessage | null = null;
   let retryCandidate: PendingMessage | null = null;
+  let responseTimeout: ReturnType<typeof setTimeout> | null = null;
 
   function patchState(patch: Partial<ChatState>): void {
     state.value = {
@@ -210,6 +162,23 @@ export function createChatSession(
 
     scheduler.clearTimeout(reconnectTimeout);
     reconnectTimeout = null;
+  }
+
+  function clearResponseTimeout(): void {
+    if (responseTimeout === null) return;
+    scheduler.clearTimeout(responseTimeout);
+    responseTimeout = null;
+  }
+
+  function scheduleResponseTimeout(): void {
+    clearResponseTimeout();
+    const timeoutMs = dependencies.responseTimeoutMs;
+    if (timeoutMs === undefined || timeoutMs <= 0) return;
+
+    responseTimeout = scheduler.setTimeout(() => {
+      responseTimeout = null;
+      markPendingAsError("El agente tardó demasiado en responder. Intenta de nuevo.");
+    }, timeoutMs);
   }
 
   function closeSocket(): void {
@@ -241,6 +210,7 @@ export function createChatSession(
   }
 
   function markPendingAsError(message: string): void {
+    clearResponseTimeout();
     if (!pendingMessage) {
       return;
     }
@@ -327,8 +297,20 @@ export function createChatSession(
       return;
     }
 
+    if (
+      parsed.conversationId !== options.conversationId ||
+      !isValidIsoTimestamp(parsed.timestamp) ||
+      (parsed.type === "agent_message" && !parsed.content?.trim())
+    ) {
+      return;
+    }
+
     if (parsed.type === "agent_typing") {
       setStatus("waiting_response");
+      return;
+    }
+
+    if (parsed.type === "ui_action") {
       return;
     }
 
@@ -352,6 +334,7 @@ export function createChatSession(
 
     pendingMessage = null;
     retryCandidate = null;
+    clearResponseTimeout();
   }
 
   function handleClose(): void {
@@ -399,6 +382,7 @@ export function createChatSession(
       timestamp,
     };
     retryCandidate = pendingMessage;
+    scheduleResponseTimeout();
 
     if (!socket || socket.readyState !== 1) {
       connect();
@@ -431,6 +415,7 @@ export function createChatSession(
       content: retryMessage.content,
       timestamp,
     };
+    scheduleResponseTimeout();
 
     if (!socket || socket.readyState !== 1) {
       connect();
@@ -451,6 +436,7 @@ export function createChatSession(
   function dispose(): void {
     disposed = true;
     clearReconnectTimer();
+    clearResponseTimeout();
     closeSocket();
   }
 
