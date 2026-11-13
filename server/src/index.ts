@@ -1,11 +1,14 @@
 import { Elysia } from "elysia";
 import { isIncomingMessage } from "@agichat/contracts";
+import type { AgentPort } from "./agents";
 import { createChatHandler, randomLatency } from "./handlers";
 import { IncomingMessageSchema, OutgoingMessageSchema } from "./schemas";
 
 interface AppOptions {
   latency?: () => number;
   allowedOrigins?: string[];
+  agent?: AgentPort;
+  agentTimeoutMs?: number;
 }
 
 function genericError(conversationId: string) {
@@ -18,7 +21,10 @@ function genericError(conversationId: string) {
 }
 
 export function createApp(options: AppOptions = {}) {
-  const handler = createChatHandler();
+  const handler = createChatHandler(options.agent, {
+    agentTimeoutMs:
+      options.agentTimeoutMs ?? Number(process.env.AGENT_TIMEOUT_MS ?? 30_000),
+  });
   const latency = options.latency ?? randomLatency;
 
   return new Elysia()
@@ -36,8 +42,8 @@ export function createApp(options: AppOptions = {}) {
         }
       },
       body: OutgoingMessageSchema,
-      message(ws, message) {
-        const responses = handler.onOutgoingMessage(message);
+      async message(ws, message) {
+        const responses = await handler.onOutgoingMessage(message);
         responses.forEach((response, index) => {
           const sendResponse = () => {
             if (!isIncomingMessage(response)) {
@@ -73,7 +79,10 @@ if (import.meta.main) {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const app = createApp({ allowedOrigins }).listen(port);
+  const app = createApp({
+    allowedOrigins,
+    agentTimeoutMs: Number(process.env.AGENT_TIMEOUT_MS ?? 30_000),
+  }).listen(port);
 
   console.log(
     `AGIChat mock API listening at ${app.server?.hostname}:${app.server?.port}`
