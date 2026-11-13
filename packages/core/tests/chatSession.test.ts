@@ -349,7 +349,7 @@ describe("createChatSession", () => {
     expect(session.state.value.messages).toHaveLength(0);
   });
 
-  it("accepts an agent message without content and ignores retry without a candidate", () => {
+  it("rejects an agent message without content and ignores retry without a candidate", () => {
     const sockets: FakeWebSocket[] = [];
     const session = createChatSession(
       { conversationId: "conv-1", apiUrl: "ws://mock" },
@@ -366,10 +366,7 @@ describe("createChatSession", () => {
       }),
     );
 
-    expect(session.state.value.messages[0]).toMatchObject({
-      role: "agent",
-      content: "",
-    });
+    expect(session.state.value.messages).toHaveLength(0);
     expect(session.state.value.status).toBe("idle");
   });
 
