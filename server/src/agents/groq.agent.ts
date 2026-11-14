@@ -1,5 +1,5 @@
 import { createGroq } from "@ai-sdk/groq";
-import { generateText } from "ai";
+import { generateText, type LanguageModel } from "ai";
 import type { IncomingMessage, OutgoingMessage } from "@agichat/contracts";
 import type { AgentPort, ConversationContext } from "./agent.port";
 import { MockAgent } from "./mock.agent";
@@ -64,6 +64,28 @@ export interface AgentEnvironment extends Record<string, string | undefined> {
   GROQ_BASE_URL?: string;
 }
 
+export interface ConfiguredGroqModel {
+  modelId: string;
+  model: LanguageModel;
+}
+
+export function createConfiguredGroqModel(
+  environment: AgentEnvironment = process.env,
+): ConfiguredGroqModel {
+  const apiKey = environment.GROQ_API_KEY?.trim();
+  const modelId = environment.GROQ_MODEL?.trim();
+  if (!apiKey) throw new Error("GROQ_API_KEY is required when AGENT_MODE=groq.");
+  if (!modelId) throw new Error("GROQ_MODEL is required when AGENT_MODE=groq.");
+
+  const groq = createGroq({
+    apiKey,
+    ...(environment.GROQ_BASE_URL?.trim()
+      ? { baseURL: environment.GROQ_BASE_URL.trim() }
+      : {}),
+  });
+  return { modelId, model: groq(modelId) };
+}
+
 export function createConfiguredAgent(
   environment: AgentEnvironment = process.env,
 ): AgentPort {
@@ -74,21 +96,10 @@ export function createConfiguredAgent(
     throw new Error('AGENT_MODE must be either "mock" or "groq".');
   }
 
-  const apiKey = environment.GROQ_API_KEY?.trim();
-  const model = environment.GROQ_MODEL?.trim();
-  if (!apiKey) throw new Error("GROQ_API_KEY is required when AGENT_MODE=groq.");
-  if (!model) throw new Error("GROQ_MODEL is required when AGENT_MODE=groq.");
-
-  const groq = createGroq({
-    apiKey,
-    ...(environment.GROQ_BASE_URL?.trim()
-      ? { baseURL: environment.GROQ_BASE_URL.trim() }
-      : {}),
-  });
-
-  return new GroqAgent(model, async (modelId, prompt) => {
+  const configuredModel = createConfiguredGroqModel(environment);
+  return new GroqAgent(configuredModel.modelId, async (_modelId, prompt) => {
     const result = await generateText({
-      model: groq(modelId),
+      model: configuredModel.model,
       instructions: AGENT_INSTRUCTIONS,
       prompt,
       maxRetries: 0,
