@@ -17,6 +17,14 @@ orígenes separados por comas; si se configura, las conexiones WebSocket de
 otros orígenes se rechazan. Consulta `.env.example` para una configuración
 local.
 
+### Selección del agente
+
+`AGENT_MODE` acepta `mock` o `groq` y usa `mock` por defecto, también en tests y
+CI. Para activar Groq configura `AGENT_MODE=groq`, `GROQ_API_KEY` y
+`GROQ_MODEL`. `GROQ_BASE_URL` es opcional para endpoints compatibles. El
+servidor falla al iniciar si se selecciona Groq y falta la credencial o el
+modelo; nunca se registra el secreto.
+
 ### Credenciales locales
 
 Los valores reales deben configurarse únicamente en un archivo `.env` local,

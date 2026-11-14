@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { isIncomingMessage } from "@agichat/contracts";
-import type { AgentPort } from "./agents";
+import { createConfiguredAgent, type AgentPort } from "./agents";
 import { createChatHandler, randomLatency } from "./handlers";
 import { IncomingMessageSchema, OutgoingMessageSchema } from "./schemas";
 
@@ -21,7 +21,7 @@ function genericError(conversationId: string) {
 }
 
 export function createApp(options: AppOptions = {}) {
-  const handler = createChatHandler(options.agent, {
+  const handler = createChatHandler(options.agent ?? createConfiguredAgent(), {
     agentTimeoutMs:
       options.agentTimeoutMs ?? Number(process.env.AGENT_TIMEOUT_MS ?? 30_000),
   });
