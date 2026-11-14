@@ -38,6 +38,7 @@
       "dependencies": {
         "@agichat/contracts": "workspace:*",
         "@ai-sdk/groq": "^4.0.84",
+        "@modelcontextprotocol/sdk": "1.32.2",
         "ai": "^7.0.173",
         "elysia": "latest",
       },
