@@ -46,6 +46,8 @@
     },
     "servers/books-mcp": {
       "name": "@agichat/books-mcp",
+    "servers/tmdb-mcp": {
+      "name": "@agichat/tmdb-mcp",
       "version": "0.1.0",
       "dependencies": {
         "@agichat/contracts": "workspace:*",
@@ -105,6 +107,8 @@
     "@agichat/mcp-shared": ["@agichat/mcp-shared@workspace:packages/mcp-shared"],
 
     "@agichat/server": ["@agichat/server@workspace:server"],
+
+    "@agichat/tmdb-mcp": ["@agichat/tmdb-mcp@workspace:servers/tmdb-mcp"],
 
     "@agichat/widget": ["@agichat/widget@workspace:widget"],
 
