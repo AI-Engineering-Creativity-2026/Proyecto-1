@@ -1,0 +1,22 @@
+{
+  "name": "@agichat/books-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@agichat/contracts": "workspace:*",
+    "@agichat/mcp-shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "elysia": "latest",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@sinclair/typebox": "^0.34.52",
+    "bun-types": "latest"
+  }
+}

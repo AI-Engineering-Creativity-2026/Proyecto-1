@@ -13,6 +13,7 @@
     "build": "bun --cwd server build && bun --cwd widget build",
     "dev": "bun --cwd widget dev",
     "dev:server": "bun --cwd server dev",
+    "dev:books-mcp": "bun --cwd servers/books-mcp dev",
     "dev:tmdb-mcp": "bun --cwd servers/tmdb-mcp dev",
     "dev:widget": "bun --cwd widget dev",
     "lint": "bun --cwd widget lint",
