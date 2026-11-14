@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
+import { MockAgent } from "../src/agents";
 import { createChatHandler } from "../src/handlers/chat.handler";
 
 const validMessage = {
@@ -11,7 +12,7 @@ const validMessage = {
 
 describe("createChatHandler", () => {
   it("emits typing and a complete markdown response", async () => {
-    const handler = createChatHandler();
+    const handler = createChatHandler(new MockAgent());
     const responses = await handler.onOutgoingMessage(validMessage);
 
     expect(responses).toHaveLength(2);
@@ -27,7 +28,7 @@ describe("createChatHandler", () => {
   });
 
   it("emits a deterministic error for the forced error marker", async () => {
-    const handler = createChatHandler();
+    const handler = createChatHandler(new MockAgent());
     const responses = await handler.onOutgoingMessage({
       ...validMessage,
       content: "__force_error__",
@@ -42,7 +43,7 @@ describe("createChatHandler", () => {
   });
 
   it("emits poster and UI action fixtures from deterministic markers", async () => {
-    const handler = createChatHandler();
+    const handler = createChatHandler(new MockAgent());
     const responses = await handler.onOutgoingMessage({
       ...validMessage,
       content: "__poster__ __open_imdb__",

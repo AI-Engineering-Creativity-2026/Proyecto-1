@@ -17,6 +17,24 @@ orígenes separados por comas; si se configura, las conexiones WebSocket de
 otros orígenes se rechazan. Consulta `.env.example` para una configuración
 local.
 
+### Selección del agente
+
+`AGENT_MODE` acepta `mock` o `groq` y usa `mock` por defecto, también en tests y
+CI. Para activar Groq configura `AGENT_MODE=groq`, `GROQ_API_KEY` y
+`GROQ_MODEL`. `GROQ_BASE_URL` es opcional para endpoints compatibles. El
+servidor falla al iniciar si se selecciona Groq y falta la credencial o el
+modelo; nunca se registra el secreto.
+
+### Clientes MCP
+
+Los clientes usan `TMDB_MCP_URL` y `BOOKS_MCP_URL`, configurados en `.env.example`
+con los nombres DNS `tmdb-mcp` y `books-mcp` de Docker Compose. El servidor y
+ambos MCP servers deben compartir la red de Docker. Se conectan mediante el SDK
+MCP oficial con transporte Streamable HTTP, validan entradas y respuestas con
+`packages/contracts` y convierten fallos de transporte o respuestas inválidas
+en errores seguros. Las pruebas inyectan invocadores respaldados por fixtures.
+El modo `mock` no abre conexiones MCP.
+
 ### Credenciales locales
 
 Los valores reales deben configurarse únicamente en un archivo `.env` local,

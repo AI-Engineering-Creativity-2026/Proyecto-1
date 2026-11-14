@@ -1,5 +1,5 @@
 import type { IncomingMessage, OutgoingMessage } from "@agichat/contracts";
-import { MockAgent, type AgentPort } from "../agents";
+import type { AgentPort } from "../agents";
 
 export type LatencyProvider = () => number;
 
@@ -28,7 +28,7 @@ function timeoutEvent(conversationId: string): IncomingMessage {
 }
 
 export function createChatHandler(
-  agent: AgentPort = new MockAgent(),
+  agent: AgentPort,
   options: ChatHandlerOptions = {},
 ): ChatHandlerResult {
   const agentTimeoutMs = options.agentTimeoutMs ?? 30_000;
