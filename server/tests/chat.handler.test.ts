@@ -75,13 +75,31 @@ describe("createChatHandler", () => {
   });
 
   it("converts an unresponsive agent into AGENT_TIMEOUT", async () => {
+    const timestamp = "2026-11-14T10:00:01.000Z";
     const handler = createChatHandler(
       { respond: () => new Promise(() => {}) },
-      { agentTimeoutMs: 0 },
+      { agentTimeoutMs: 0, now: () => new Date(timestamp) },
     );
 
     const responses = await handler.onOutgoingMessage(validMessage);
 
-    expect(responses[0]).toMatchObject({ type: "error", error: { code: "AGENT_TIMEOUT" } });
+    expect(responses[0]).toMatchObject({
+      type: "error",
+      error: { code: "AGENT_TIMEOUT" },
+      timestamp,
+    });
+  });
+
+  it("maps thrown upstream and rate limit errors to stable safe contract codes", async () => {
+    const now = () => new Date("2026-11-14T10:00:01.000Z");
+    for (const code of ["UPSTREAM_ERROR", "RATE_LIMITED"] as const) {
+      const handler = createChatHandler({
+        respond: async () => { throw Object.assign(new Error("provider secret"), { code }); },
+      }, { now });
+      const [response] = await handler.onOutgoingMessage(validMessage);
+
+      expect(response).toMatchObject({ type: "error", error: { code }, timestamp: now().toISOString() });
+      expect(JSON.stringify(response)).not.toContain("provider secret");
+    }
   });
 });

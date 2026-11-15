@@ -138,6 +138,28 @@ describe("OrchestratorAgent", () => {
     });
   });
 
+  it("preserves upstream classifications from subagents even if the model handles tool failure", async () => {
+    const tools = createOrchestratorTools(async () => {
+      throw Object.assign(new Error("provider secret"), { code: "UPSTREAM_ERROR" });
+    }, async () => ({ content: "unused" }));
+    const agent = new OrchestratorAgent(tools, async (_prompt, availableTools) => {
+      try {
+        await availableTools.recommendMovies({ request: "Matrix" });
+      } catch {
+        return "No pude consultar el servicio.";
+      }
+      return "unexpected";
+    }, fixedNow);
+
+    const [response] = await agent.respond({ ...message, content: "Recomienda una película de Matrix" }, context);
+
+    expect(response).toMatchObject({
+      type: "error",
+      error: { code: "UPSTREAM_ERROR", message: "Un servicio externo no está disponible. Intenta de nuevo." },
+    });
+    expect(JSON.stringify(response)).not.toContain("provider secret");
+  });
+
   it("exposes only the two allowed subagent tools and caps orchestration steps", () => {
     const tools = createOrchestratorSdkTools(
       createOrchestratorTools(async () => ({ content: "movie" }), async () => ({ content: "comparison" })),

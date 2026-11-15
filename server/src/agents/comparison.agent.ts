@@ -2,7 +2,7 @@ import { generateText, jsonSchema, stepCountIs, tool, type LanguageModel } from 
 import { Type, type Static } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { McpToolSchemas, McpToolResponseSchemas } from "@agichat/contracts";
-import type { BooksMcpClient } from "../mcp/mcp.clients";
+import { McpClientError, type BooksMcpClient } from "../mcp/mcp.clients";
 import type { AgentEnvironment } from "./groq.agent";
 import { createConfiguredGroqModel } from "./groq.agent";
 
@@ -85,7 +85,7 @@ export const COMPARISON_INSTRUCTIONS = [
 
 export class ComparisonAgentError extends Error {
   constructor(
-    public readonly code: "INVALID_MESSAGE" | "AGENT_ERROR",
+    public readonly code: "INVALID_MESSAGE" | "AGENT_ERROR" | "UPSTREAM_ERROR" | "RATE_LIMITED",
     message: string,
   ) {
     super(message);
@@ -124,9 +124,18 @@ export class ComparisonAgent {
       return { content: formatComparison(normalizedMovie, book, assessment), book };
     } catch (error: unknown) {
       if (error instanceof ComparisonAgentError) throw error;
+      if (error instanceof McpClientError) {
+        throw new ComparisonAgentError(error.code, safeProviderMessage(error.code));
+      }
       throw new ComparisonAgentError("AGENT_ERROR", SAFE_ERROR_MESSAGE);
     }
   }
+}
+
+function safeProviderMessage(code: "UPSTREAM_ERROR" | "RATE_LIMITED"): string {
+  return code === "RATE_LIMITED"
+    ? "Google Books alcanzó su límite de solicitudes. Intenta más tarde."
+    : "Google Books no está disponible. Intenta de nuevo.";
 }
 
 export function createComparisonAgentTools(books: BooksMcpClient): ComparisonAgentTools {

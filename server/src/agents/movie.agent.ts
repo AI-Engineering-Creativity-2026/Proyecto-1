@@ -12,7 +12,7 @@ import {
 } from "@agichat/contracts";
 import type { AgentEnvironment } from "./groq.agent";
 import { createConfiguredGroqModel } from "./groq.agent";
-import type { TmdbMcpClient } from "../mcp/mcp.clients";
+import { McpClientError, type TmdbMcpClient } from "../mcp/mcp.clients";
 
 type SearchMoviesInput = Static<typeof McpToolSchemas.search_movies>;
 type MovieIdInput = Static<typeof McpToolSchemas.get_movie_details>;
@@ -40,7 +40,7 @@ const MOVIE_AGENT_INSTRUCTIONS = [
 
 export class MovieAgentError extends Error {
   constructor(
-    public readonly code: "INVALID_MESSAGE" | "AGENT_ERROR",
+    public readonly code: "INVALID_MESSAGE" | "AGENT_ERROR" | "UPSTREAM_ERROR" | "RATE_LIMITED",
     message: string,
   ) {
     super(message);
@@ -99,13 +99,23 @@ export class MovieAgent {
       const response = (await this.runtime(prompt.trim(), observingTools)).trim();
       if (!response) throw new Error("Empty movie agent response.");
       return { content: response, evidence };
-    } catch {
+    } catch (error: unknown) {
+      if (error instanceof MovieAgentError) throw error;
+      if (error instanceof McpClientError) {
+        throw new MovieAgentError(error.code, safeProviderMessage(error.code));
+      }
       throw new MovieAgentError(
         "AGENT_ERROR",
         "No se pudo completar la búsqueda de películas. Intenta de nuevo.",
       );
     }
   }
+}
+
+function safeProviderMessage(code: "UPSTREAM_ERROR" | "RATE_LIMITED"): string {
+  return code === "RATE_LIMITED"
+    ? "El servicio de películas alcanzó su límite de solicitudes. Intenta más tarde."
+    : "El servicio de películas no está disponible. Intenta de nuevo.";
 }
 
 export function createMovieAgentTools(tmdb: TmdbMcpClient): MovieAgentTools {

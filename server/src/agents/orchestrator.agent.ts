@@ -66,6 +66,7 @@ const INVALID_MESSAGE =
   "La solicitud debe tener entre 1 y 2000 caracteres.";
 const GENERIC_AGENT_ERROR =
   "No se pudo procesar tu solicitud. Intenta de nuevo.";
+type AgentFailureCode = "UPSTREAM_ERROR" | "RATE_LIMITED";
 
 export class OrchestratorAgent implements AgentPort {
   constructor(
@@ -88,26 +89,45 @@ export class OrchestratorAgent implements AgentPort {
 
     try {
       const evidence: AgentPresentationEvidence = { movies: [] };
+      let providerFailure: AgentFailureCode | undefined;
       const runTools = createOrchestratorTools(
         async (input) => {
-          const result = await this.tools.recommendMovies(input);
-          evidence.movies.push(...(result.movies ?? []));
-          return { content: result.content };
+          try {
+            const result = await this.tools.recommendMovies(input);
+            evidence.movies.push(...(result.movies ?? []));
+            return { content: result.content };
+          } catch (error: unknown) {
+            providerFailure ??= providerFailureCode(error);
+            throw error;
+          }
         },
         async (input) => {
-          const result = await this.tools.compareMovieWithBook(input);
-          if (result.book !== undefined) evidence.book = result.book;
-          return { content: result.content };
+          try {
+            const result = await this.tools.compareMovieWithBook(input);
+            if (result.book !== undefined) evidence.book = result.book;
+            return { content: result.content };
+          } catch (error: unknown) {
+            providerFailure ??= providerFailureCode(error);
+            throw error;
+          }
         },
       );
       const generated = (await this.runtime(prompt, runTools)).trim();
+      if (providerFailure !== undefined) {
+        return [this.error(message.conversationId, providerFailure, providerErrorMessage(providerFailure))];
+      }
       if (!generated) throw new Error("Empty orchestrator response.");
       const content = includesComparisonOffer(generated)
         ? generated
         : `${generated}\n\n${CAPABILITY_OFFER}`;
       return createAgentOutputMessages(message.conversationId, content, evidence, this.now);
-    } catch {
-      return [this.error(message.conversationId, "AGENT_ERROR", GENERIC_AGENT_ERROR)];
+    } catch (error: unknown) {
+      const code = providerFailureCode(error) ?? "AGENT_ERROR";
+      return [this.error(
+        message.conversationId,
+        code,
+        code === "AGENT_ERROR" ? GENERIC_AGENT_ERROR : providerErrorMessage(code),
+      )];
     }
   }
 
@@ -122,7 +142,7 @@ export class OrchestratorAgent implements AgentPort {
 
   private error(
     conversationId: string,
-    code: "INVALID_MESSAGE" | "AGENT_ERROR",
+    code: "INVALID_MESSAGE" | "AGENT_ERROR" | AgentFailureCode,
     message: string,
   ): IncomingMessage {
     return {
@@ -132,6 +152,19 @@ export class OrchestratorAgent implements AgentPort {
       timestamp: this.now().toISOString(),
     };
   }
+}
+
+function providerFailureCode(error: unknown): AgentFailureCode | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  return error.code === "RATE_LIMITED" || error.code === "UPSTREAM_ERROR"
+    ? error.code
+    : undefined;
+}
+
+function providerErrorMessage(code: AgentFailureCode): string {
+  return code === "RATE_LIMITED"
+    ? "Un servicio alcanzó su límite de solicitudes. Intenta más tarde."
+    : "Un servicio externo no está disponible. Intenta de nuevo.";
 }
 
 export function createOrchestratorTools(

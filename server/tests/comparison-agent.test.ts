@@ -12,6 +12,7 @@ import {
 } from "../src/agents/comparison.agent";
 import {
   createMcpClients,
+  McpClientError,
   type BooksMcpClient,
   type McpToolInvoker,
 } from "../src/mcp/mcp.clients";
@@ -152,6 +153,18 @@ describe("comparison subagent", () => {
       message: "No se pudo completar la comparación con el libro. Intenta de nuevo.",
     });
     expect(String(failure)).not.toContain("provider secret");
+  });
+
+  it("preserves stable MCP classifications for Google Books failures", async () => {
+    for (const code of ["RATE_LIMITED", "UPSTREAM_ERROR"] as const) {
+      const agent = new ComparisonAgent({
+        searchBooks: async () => { throw new McpClientError(code, "provider secret"); },
+        getBookDetails: async () => { throw new Error("unused"); },
+      }, async () => assessmentWithoutEvidence);
+
+      await expect(agent.run(movie)).rejects.toMatchObject({ code });
+      await expect(agent.run(movie)).rejects.not.toThrow("provider secret");
+    }
   });
 
   it("keeps the comparison criteria explicit and creates from Groq configuration offline", () => {
