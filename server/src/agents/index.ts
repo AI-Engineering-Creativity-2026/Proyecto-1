@@ -11,3 +11,16 @@ export {
   MovieAgentError,
 } from "./movie.agent";
 export type { MovieAgentRuntime, MovieAgentTools } from "./movie.agent";
+export {
+  COMPARISON_CRITERIA,
+  ComparisonAgent,
+  ComparisonAgentError,
+  createComparisonAgent,
+  createComparisonAgentTools,
+  createConfiguredComparisonAgent,
+} from "./comparison.agent";
+export type {
+  ComparisonAgentTools,
+  ComparisonRuntime,
+  MovieForComparison,
+} from "./comparison.agent";
