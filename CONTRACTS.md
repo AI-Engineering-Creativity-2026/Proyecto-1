@@ -100,10 +100,12 @@ export interface ChatState {
 
 ```typescript
 // packages/core/src/composables/useChat.ts
+import type { UiAction } from "@agichat/contracts";
 
 export interface UseChatOptions {
   conversationId: string;
   apiUrl: string;
+  onAction?: (action: UiAction["action"]) => void;
 }
 
 export interface UseChatReturn {
@@ -119,6 +121,7 @@ export function useChat(options: UseChatOptions): UseChatReturn;
 ### 2.3 Reglas de este contrato
 
 - `state` es de solo lectura desde la UI — cualquier mutación pasa por los métodos expuestos (`sendMessage`, `retryLastMessage`).
+- `useChat` entrega al callback `onAction` únicamente acciones `ui_action` válidas y con URL permitida; la UI valida nuevamente la URL antes de abrirla.
 - Mientras `status === "waiting_response"`, la UI debe deshabilitar el input y mostrar el indicador de "escribiendo".
 - Si `status === "error"`, `error` contiene un mensaje legible para mostrar al usuario; `retryLastMessage()` debe reintentar el último mensaje fallido.
 - El campo `content` de `Message` **siempre** es markdown crudo, nunca HTML. El sanitizado y render ocurre en la capa de UI, no en Core.
@@ -235,8 +238,12 @@ providers?: ("tmdb" | "google_books")[];
 ```
 
 `providers` permite mostrar atribución de las fuentes utilizadas. Core debe
-validar el evento y, por ahora, ignorar `ui_action` y sus datos visuales sin
-generar un error ni agregarlos al historial.
+validar cada evento `ui_action` y entregar `action` al callback `onAction` de
+`useChat` solo si `kind` es `open_url`, el esquema es HTTPS y el host coincide
+con la allowlist (`www.imdb.com` o `books.google.com`) y con su `source`
+correspondiente. Las acciones inválidas o sin callback configurado se ignoran
+sin cambiar el estado ni el historial. Las acciones nunca se agregan al
+historial de mensajes.
 
 Los códigos permitidos en `error.error.code` son:
 

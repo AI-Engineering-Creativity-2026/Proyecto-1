@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { effectScope, isRef } from "vue";
+import type { UiAction } from "@agichat/contracts";
 
 import { useChat } from "../src/composables/useChat";
 import type { WebSocketLike } from "../src/services/chatSession";
@@ -40,11 +41,18 @@ class MockWebSocket implements WebSocketLike {
       listener({});
     }
   }
+
+  emitMessage(data: string): void {
+    for (const listener of this.listeners.get("message") ?? []) {
+      listener({ data });
+    }
+  }
 }
 
 describe("useChat", () => {
   it("initializes with reactive state and requires the configured apiUrl", () => {
     const sockets: MockWebSocket[] = [];
+    const actions: UiAction["action"][] = [];
     const originalWebSocket = globalThis.WebSocket;
 
     class TestWebSocket extends MockWebSocket {
@@ -62,6 +70,7 @@ describe("useChat", () => {
         useChat({
           conversationId: "conv-use-chat-1",
           apiUrl: "ws://localhost:3000/ws",
+          onAction: (action) => actions.push(action),
         })
       );
 
@@ -81,6 +90,21 @@ describe("useChat", () => {
 
       sockets[0].open();
       expect(chat.state.value.status).toBe("idle");
+
+      const action: UiAction["action"] = {
+        kind: "open_url",
+        url: "https://www.imdb.com/title/tt0000001/",
+        source: "imdb",
+      };
+      sockets[0].emitMessage(JSON.stringify({
+        type: "ui_action",
+        conversationId: "conv-use-chat-1",
+        timestamp: "2026-08-13T10:00:00.000Z",
+        action,
+      }));
+
+      expect(actions).toEqual([action]);
+      expect(chat.state.value.messages).toHaveLength(0);
 
       chat.sendMessage("Test message from useChat");
       expect(chat.state.value.status).toBe("waiting_response");
