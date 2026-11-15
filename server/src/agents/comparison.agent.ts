@@ -57,6 +57,11 @@ export type ComparisonRuntime = (
   book: BookDetailsResult,
 ) => Promise<ComparisonAssessment>;
 
+export interface ComparisonAgentExecution {
+  content: string;
+  book: BookDetailsResult | null;
+}
+
 const NO_BOOK_MESSAGE =
   "No encontré un libro asociado con esta película en Google Books, así que no puedo hacer una comparación fiable.";
 const SAFE_ERROR_MESSAGE =
@@ -99,12 +104,16 @@ export class ComparisonAgent {
   }
 
   async run(movie: MovieForComparison): Promise<string> {
+    return (await this.runWithEvidence(movie)).content;
+  }
+
+  async runWithEvidence(movie: MovieForComparison): Promise<ComparisonAgentExecution> {
     validateMovie(movie);
 
     try {
       const matches = await this.tools.searchBooks({ title: movie.title.trim() });
       const candidate = matches.results[0];
-      if (!candidate) return NO_BOOK_MESSAGE;
+      if (!candidate) return { content: NO_BOOK_MESSAGE, book: null };
 
       const book = await this.tools.getBookDetails({ volumeId: candidate.volumeId });
       const normalizedMovie = normalizeMovie(movie);
@@ -112,7 +121,7 @@ export class ComparisonAgent {
       if (!Value.Check(ComparisonAssessmentSchema, assessment)) {
         throw new Error("Invalid comparison assessment.");
       }
-      return formatComparison(normalizedMovie, book, assessment);
+      return { content: formatComparison(normalizedMovie, book, assessment), book };
     } catch (error: unknown) {
       if (error instanceof ComparisonAgentError) throw error;
       throw new ComparisonAgentError("AGENT_ERROR", SAFE_ERROR_MESSAGE);

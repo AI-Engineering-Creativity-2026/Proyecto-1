@@ -20,6 +20,16 @@ type SearchMoviesResult = Static<typeof McpToolResponseSchemas.tmdb.search_movie
 type MovieDetailsResult = Static<typeof McpToolResponseSchemas.tmdb.get_movie_details>;
 type RecommendationsResult = Static<typeof McpToolResponseSchemas.tmdb.get_recommendations>;
 
+export interface MovieAgentEvidence {
+  source: "search_movies" | "get_movie_details" | "get_recommendations";
+  movie: MovieDetailsResult;
+}
+
+export interface MovieAgentExecution {
+  content: string;
+  evidence: MovieAgentEvidence[];
+}
+
 const MOVIE_AGENT_INSTRUCTIONS = [
   "Eres el subagente de películas de AGIChat y respondes en español con Markdown.",
   "Usa las herramientas MCP para buscar películas y recomendaciones; nunca inventes títulos, detalles ni resultados.",
@@ -56,6 +66,10 @@ export class MovieAgent {
   ) {}
 
   async run(prompt: string): Promise<string> {
+    return (await this.runWithEvidence(prompt)).content;
+  }
+
+  async runWithEvidence(prompt: string): Promise<MovieAgentExecution> {
     if (typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 2000) {
       throw new MovieAgentError(
         "INVALID_MESSAGE",
@@ -64,9 +78,27 @@ export class MovieAgent {
     }
 
     try {
-      const response = (await this.runtime(prompt.trim(), this.tools)).trim();
+      const evidence: MovieAgentEvidence[] = [];
+      const observingTools: MovieAgentTools = {
+        searchMovies: async (input) => {
+          const result = await this.tools.searchMovies(input);
+          evidence.push(...result.results.map((movie) => ({ source: "search_movies" as const, movie })));
+          return result;
+        },
+        getMovieDetails: async (input) => {
+          const result = await this.tools.getMovieDetails(input);
+          evidence.push({ source: "get_movie_details", movie: result });
+          return result;
+        },
+        getRecommendations: async (input) => {
+          const result = await this.tools.getRecommendations(input);
+          evidence.push(...result.results.map((movie) => ({ source: "get_recommendations" as const, movie })));
+          return result;
+        },
+      };
+      const response = (await this.runtime(prompt.trim(), observingTools)).trim();
       if (!response) throw new Error("Empty movie agent response.");
-      return response;
+      return { content: response, evidence };
     } catch {
       throw new MovieAgentError(
         "AGENT_ERROR",

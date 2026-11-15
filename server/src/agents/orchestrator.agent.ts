@@ -6,15 +6,18 @@ import {
   type LanguageModel,
 } from "ai";
 import { Type, type Static } from "@sinclair/typebox";
-import type { IncomingMessage, OutgoingMessage } from "@agichat/contracts";
+import { McpToolResponseSchemas, type IncomingMessage, type OutgoingMessage } from "@agichat/contracts";
 import { createComparisonAgent } from "./comparison.agent";
 import type { MovieForComparison } from "./comparison.agent";
 import { createConfiguredGroqModel, type AgentEnvironment } from "./groq.agent";
 import { createMovieAgent } from "./movie.agent";
+import type { MovieAgentEvidence } from "./movie.agent";
 import { MockAgent } from "./mock.agent";
+import { createAgentOutputMessages, type AgentPresentationEvidence } from "./agent-output";
 import type { AgentPort, ConversationContext } from "./agent.port";
 import type { McpClients } from "../mcp/mcp.clients";
 import { connectMcpClients, readMcpClientConfig } from "../mcp/mcp.clients";
+type BookDetails = Static<typeof McpToolResponseSchemas.books.get_book_details>;
 
 const RecommendationRequestSchema = Type.Object({
   request: Type.String({ minLength: 1, maxLength: 2000 }),
@@ -30,8 +33,14 @@ type RecommendationRequest = Static<typeof RecommendationRequestSchema>;
 type ComparisonRequest = Static<typeof ComparisonRequestSchema>;
 
 export interface OrchestratorTools {
-  recommendMovies(input: RecommendationRequest): Promise<string>;
-  compareMovieWithBook(input: MovieForComparison): Promise<string>;
+  recommendMovies(input: RecommendationRequest): Promise<SubagentResult>;
+  compareMovieWithBook(input: MovieForComparison): Promise<SubagentResult>;
+}
+
+export interface SubagentResult {
+  content: string;
+  movies?: MovieAgentEvidence[];
+  book?: BookDetails | null;
 }
 
 export type OrchestratorRuntime = (
@@ -78,19 +87,25 @@ export class OrchestratorAgent implements AgentPort {
     }
 
     try {
-      const generated = (await this.runtime(prompt, this.tools)).trim();
+      const evidence: AgentPresentationEvidence = { movies: [] };
+      const runTools = createOrchestratorTools(
+        async (input) => {
+          const result = await this.tools.recommendMovies(input);
+          evidence.movies.push(...(result.movies ?? []));
+          return { content: result.content };
+        },
+        async (input) => {
+          const result = await this.tools.compareMovieWithBook(input);
+          if (result.book !== undefined) evidence.book = result.book;
+          return { content: result.content };
+        },
+      );
+      const generated = (await this.runtime(prompt, runTools)).trim();
       if (!generated) throw new Error("Empty orchestrator response.");
       const content = includesComparisonOffer(generated)
         ? generated
         : `${generated}\n\n${CAPABILITY_OFFER}`;
-      return [
-        {
-          type: "agent_typing",
-          conversationId: message.conversationId,
-          timestamp: this.now().toISOString(),
-        },
-        this.message(message.conversationId, content),
-      ];
+      return createAgentOutputMessages(message.conversationId, content, evidence, this.now);
     } catch {
       return [this.error(message.conversationId, "AGENT_ERROR", GENERIC_AGENT_ERROR)];
     }
@@ -131,17 +146,17 @@ export function createOrchestratorSdkTools(tools: OrchestratorTools) {
     recommend_movies: tool({
       description: "Delega búsquedas y recomendaciones de películas al subagente conectado a TMDB MCP.",
       inputSchema: jsonSchema<RecommendationRequest>(RecommendationRequestSchema),
-      execute: tools.recommendMovies,
+      execute: async (input) => (await tools.recommendMovies(input)).content,
     }),
     compare_movie_with_book: tool({
       description: "Delega la búsqueda del libro y la comparación con la película al subagente conectado a Google Books MCP.",
       inputSchema: jsonSchema<ComparisonRequest>(ComparisonRequestSchema),
-      execute: (input) => tools.compareMovieWithBook({
+      execute: async (input) => (await tools.compareMovieWithBook({
         title: input.title,
         overview: input.overview ?? "",
         ...(input.year !== undefined ? { year: input.year } : {}),
         ...(input.genres !== undefined ? { genres: input.genres } : {}),
-      }),
+      })).content,
     }),
   };
 }
@@ -153,8 +168,14 @@ export function createOrchestratorAgent(
   now?: () => Date,
 ): OrchestratorAgent {
   const tools = createOrchestratorTools(
-    ({ request }) => movieAgent.run(request),
-    (movie) => comparisonAgent.run(movie),
+    async ({ request }) => {
+      const execution = await movieAgent.runWithEvidence(request);
+      return { content: execution.content, movies: execution.evidence };
+    },
+    async (movie) => {
+      const execution = await comparisonAgent.runWithEvidence(movie);
+      return { content: execution.content, book: execution.book };
+    },
   );
   return new OrchestratorAgent(tools, async (prompt, agentTools) => {
     const result = await generateText({
