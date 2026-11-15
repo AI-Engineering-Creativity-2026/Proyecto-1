@@ -564,6 +564,49 @@ button {
   stroke-width: 1.4;
 }
 
+.external-link-fallback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.8rem;
+  margin-top: 1rem;
+  color: #35483f;
+  background: #f4f7f2;
+  border: 1px solid #dfe8df;
+  border-radius: 12px;
+}
+
+.external-link-fallback p {
+  flex: 1 1 170px;
+  margin: 0;
+  color: #64756e;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.external-link-fallback button {
+  min-height: 38px;
+  padding: 0.55rem 0.8rem;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--brand);
+  border: 0;
+  border-radius: 10px;
+}
+
+.external-link-fallback button:hover {
+  background: var(--brand-dark);
+}
+
+.external-link-fallback button:focus-visible {
+  outline: 3px solid #94ad9d;
+  outline-offset: 2px;
+}
+
 .chat-footer {
   padding: 0.75rem 1rem 0.65rem;
   background: #fbfcfa;

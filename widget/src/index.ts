@@ -51,8 +51,8 @@ export function init(config: AGIChatConfig): void {
   destroy();
 
   const element = document.createElement(widgetTagName);
-  element.setAttribute("data-api-url", config.apiUrl);
-  element.setAttribute("data-conversation-id", createConversationId(config.conversationId));
+  element.setAttribute("api-url", config.apiUrl);
+  element.setAttribute("conversation-id", createConversationId(config.conversationId));
   applyTheme(element, config.theme);
   container.appendChild(element);
   mountedElement = element;
