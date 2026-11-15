@@ -1,6 +1,20 @@
-# widget
+# AGIChat widget
 
-This template should help get you started developing with Vue 3 in Vite.
+The embeddable widget and its demo are built with Vue 3 and Vite.
+
+## Run the embedded demo
+
+Start the mock server and the widget dev server from the repository root:
+
+```sh
+bun run dev:server
+bun run dev:widget
+```
+
+Open [http://localhost:5173/demo.html](http://localhost:5173/demo.html). The demo
+mounts the widget through the public `window.AGIChat.init()` API. Set
+`VITE_AGICHAT_API_URL` in the environment to use another WebSocket endpoint; it
+defaults to `ws://localhost:3000/ws`.
 
 ## Recommended IDE Setup
 

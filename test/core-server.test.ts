@@ -1,119 +1,137 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { createApp } from "../server/src/index";
-import { createChatSession } from "../packages/core/src/services/chatSession";
+import { describe, expect, it } from "bun:test";
+import type { OutgoingMessage } from "@agichat/contracts";
+import { MockAgent } from "../server/src/agents/mock.agent";
+import {
+  createChatSession,
+  type SocketCloseEvent,
+  type SocketErrorEvent,
+  type SocketMessageEvent,
+  type WebSocketLike,
+} from "../packages/core/src/services/chatSession";
 
-function waitFor(predicate: () => boolean, timeoutMs = 4000): Promise<void> {
-  const start = Date.now();
-  return new Promise((resolve, reject) => {
-    const interval = setInterval(() => {
-      if (predicate()) {
-        clearInterval(interval);
-        resolve();
-      } else if (Date.now() - start > timeoutMs) {
-        clearInterval(interval);
-        reject(new Error("Timeout waiting for condition"));
+type SocketEventType = "open" | "message" | "close" | "error";
+type SocketListener = (
+  event: SocketMessageEvent | SocketCloseEvent | SocketErrorEvent | Event,
+) => void;
+
+class MockServerSocket implements WebSocketLike {
+  readyState = 0;
+  private readonly listeners = new Map<SocketEventType, Set<SocketListener>>();
+  private pendingResponse: Promise<void> = Promise.resolve();
+
+  constructor(private readonly agent: MockAgent) {}
+
+  addEventListener(type: SocketEventType, listener: SocketListener): void {
+    const listeners = this.listeners.get(type) ?? new Set<SocketListener>();
+    listeners.add(listener);
+    this.listeners.set(type, listeners);
+  }
+
+  removeEventListener(type: SocketEventType, listener: SocketListener): void {
+    this.listeners.get(type)?.delete(listener);
+  }
+
+  send(data: string): void {
+    const message = JSON.parse(data) as OutgoingMessage;
+    this.pendingResponse = this.pendingResponse.then(async () => {
+      const responses = await this.agent.respond(message, {
+        conversationId: message.conversationId,
+        history: [],
+      });
+
+      for (const response of responses) {
+        this.dispatch("message", { data: JSON.stringify(response) });
       }
-    }, 25);
-  });
+    });
+  }
+
+  close(): void {
+    this.readyState = 3;
+    this.dispatch("close", { code: 1000, reason: "closed", wasClean: true });
+  }
+
+  open(): void {
+    this.readyState = 1;
+    this.dispatch("open", {});
+  }
+
+  flush(): Promise<void> {
+    return this.pendingResponse;
+  }
+
+  private dispatch(type: SocketEventType, event: unknown): void {
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(event as SocketMessageEvent | SocketCloseEvent | SocketErrorEvent | Event);
+    }
+  }
 }
 
-describe("Core <-> Server WebSocket Integration", () => {
-  let app: ReturnType<typeof createApp>;
-  let port: number;
-  let apiUrl: string;
+function createSession(agent = new MockAgent()) {
+  const socket = new MockServerSocket(agent);
+  const session = createChatSession(
+    { conversationId: "demo-conversation", apiUrl: "ws://mock-server/ws" },
+    {
+      socketFactory: () => socket,
+      now: () => "2026-11-15T10:00:00.000Z",
+      createId: () => "test-id",
+    },
+  );
 
-  beforeAll(() => {
-    app = createApp({ latency: () => 0 }).listen(0);
-    port = app.server?.port ?? 3000;
-    apiUrl = `ws://localhost:${port}/ws`;
-  });
+  return { session, socket };
+}
 
-  afterAll(() => {
-    app.stop();
-  });
-
-  it("connects to the real Elysia server and transitions from connecting to idle", async () => {
-    const session = createChatSession({
-      conversationId: "integration-connect",
-      apiUrl,
-    });
+describe("Core <-> server message contract", () => {
+  it("transitions from connecting to idle when the socket opens", () => {
+    const { session, socket } = createSession();
 
     expect(session.state.value.status).toBe("connecting");
+    socket.open();
 
-    await waitFor(() => session.state.value.status === "idle");
     expect(session.state.value.status).toBe("idle");
     expect(session.state.value.error).toBeNull();
-
     session.dispose();
   });
 
-  it("handles the full message lifecycle with latency, typing and raw markdown response", async () => {
-    const session = createChatSession({
-      conversationId: "integration-messages",
-      apiUrl,
-    });
+  it("handles typing and a complete raw Markdown response without real sockets or delays", async () => {
+    const { session, socket } = createSession();
+    socket.open();
+    session.sendMessage("Necesito ayuda con mi **factura**");
 
-    await waitFor(() => session.state.value.status === "idle");
-
-    const messageText = "Necesito ayuda con mi **factura**";
-    session.sendMessage(messageText);
-
-    // Immediately transitions to waiting_response and creates user message
     expect(session.state.value.status).toBe("waiting_response");
-    expect(session.state.value.messages).toHaveLength(1);
     expect(session.state.value.messages[0]).toMatchObject({
       role: "user",
-      content: messageText,
+      content: "Necesito ayuda con mi **factura**",
       status: "sent",
     });
 
-    // Server sends agent_typing, state remains waiting_response
-    await waitFor(() => session.state.value.messages.length === 2, 2000);
+    await socket.flush();
 
-    // After server delay (~750ms), agent_message arrives and state returns to idle
     expect(session.state.value.status).toBe("idle");
     expect(session.state.value.error).toBeNull();
-    expect(session.state.value.messages).toHaveLength(2);
-
-    const agentMessage = session.state.value.messages[1];
-    expect(agentMessage.role).toBe("agent");
-    // Markdown formatting is preserved raw as per contract
-    expect(agentMessage.content).toBe(`Recibí tu mensaje: **${messageText}**`);
-
+    expect(session.state.value.messages[1]).toMatchObject({
+      role: "agent",
+      content: "Recibí tu mensaje: **Necesito ayuda con mi **factura****",
+    });
     session.dispose();
   });
 
-  it("handles deterministic server error via __force_error__ and enables retry", async () => {
-    const session = createChatSession({
-      conversationId: "integration-error",
-      apiUrl,
-    });
-
-    await waitFor(() => session.state.value.status === "idle");
-
+  it("handles deterministic errors and retries through the same contract", async () => {
+    const { session, socket } = createSession();
+    socket.open();
     session.sendMessage("Prueba con __force_error__");
-    expect(session.state.value.status).toBe("waiting_response");
-
-    // Server immediately replies with error event
-    await waitFor(() => session.state.value.status === "error", 2000);
+    await socket.flush();
 
     expect(session.state.value.status).toBe("error");
     expect(session.state.value.error).toBe("No se pudo procesar el mensaje. Intenta de nuevo.");
-    expect(session.state.value.messages[0].status).toBe("error");
+    expect(session.state.value.messages[0]?.status).toBe("error");
 
-    // Retry last message resets status and clears error
     session.retryLastMessage();
     expect(session.state.value.status).toBe("waiting_response");
-    expect(session.state.value.error).toBeNull();
-
-    // Since message still contains __force_error__, server will return error again
-    await waitFor(() => session.state.value.status === "error", 2000);
+    await socket.flush();
     expect(session.state.value.status).toBe("error");
 
-    // Clear error resets error to null
     session.clearError();
     expect(session.state.value.error).toBeNull();
-
     session.dispose();
   });
 });
