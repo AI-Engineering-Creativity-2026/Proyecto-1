@@ -163,10 +163,52 @@ describe("createChatSession", () => {
       );
 
       expect(session.state.value.status).toBe("error");
-      expect(session.state.value.error).toBe("fallo controlado");
+      expect(session.state.value.error).toBe("No se pudo procesar el mensaje. Intenta de nuevo.");
       expect(session.state.value.messages[0]).toMatchObject({ status: "error" });
     } finally {
       globalThis.WebSocket = originalWebSocket;
+    }
+  });
+
+  it("shows safe, code-specific copy for agent errors and keeps them recoverable", () => {
+    const cases = [
+      ["RATE_LIMITED", "El servicio está recibiendo demasiadas solicitudes. Intenta de nuevo en unos momentos."],
+      ["AGENT_TIMEOUT", "El agente tardó demasiado en responder. Intenta de nuevo."],
+      ["BLOCKED_INPUT", "No puedo procesar ese mensaje. Prueba con una solicitud distinta."],
+      ["UPSTREAM_ERROR", "Un servicio externo no está disponible ahora. Intenta de nuevo."],
+      ["AGENT_ERROR", "No se pudo preparar una respuesta. Intenta de nuevo."],
+    ] as const;
+
+    for (const [code, expectedMessage] of cases) {
+      const sockets: FakeWebSocket[] = [];
+      const session = createChatSession(
+        { conversationId: "conv-1", apiUrl: "ws://mock" },
+        {
+          socketFactory: createSocketFactory(sockets),
+          scheduler: new ManualScheduler(),
+          now: () => "2026-08-13T10:00:00.000Z",
+          createId: createIdFactory(),
+        }
+      );
+      sockets[0].open();
+      session.sendMessage("Hola");
+      sockets[0].emitMessage(JSON.stringify({
+        type: "error",
+        conversationId: "conv-1",
+        error: { code, message: "internal stack trace and provider secret" },
+        timestamp: "2026-08-13T10:00:02.000Z",
+      }));
+
+      expect(session.state.value.status).toBe("error");
+      expect(session.state.value.error).toBe(expectedMessage);
+      expect(session.state.value.error).not.toContain("internal");
+      expect(session.state.value.error).not.toContain("secret");
+      expect(session.state.value.messages[0]).toMatchObject({ status: "error" });
+
+      session.retryLastMessage();
+      expect(session.state.value.status).toBe("waiting_response");
+      expect(sockets[0].sent).toHaveLength(2);
+      session.dispose();
     }
   });
 

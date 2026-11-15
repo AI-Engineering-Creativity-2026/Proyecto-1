@@ -2,6 +2,7 @@ import { readonly, ref, type Ref } from "vue";
 import {
   isIncomingMessage,
   type AgentMessage,
+  type ErrorCode,
   type UiAction,
 } from "@agichat/contracts";
 
@@ -146,6 +147,20 @@ function createAgentMessage(id: string, message: AgentMessage): Message {
     ...(message.attachments === undefined ? {} : { attachments: message.attachments }),
     ...(message.providers === undefined ? {} : { providers: message.providers }),
   };
+}
+
+function userFacingError(code: ErrorCode): string {
+  const messages: Record<ErrorCode, string> = {
+    FORCED_ERROR: "No se pudo procesar el mensaje. Intenta de nuevo.",
+    INVALID_MESSAGE: "El mensaje no se pudo procesar. Revísalo e inténtalo de nuevo.",
+    BLOCKED_INPUT: "No puedo procesar ese mensaje. Prueba con una solicitud distinta.",
+    AGENT_TIMEOUT: "El agente tardó demasiado en responder. Intenta de nuevo.",
+    AGENT_ERROR: "No se pudo preparar una respuesta. Intenta de nuevo.",
+    UPSTREAM_ERROR: "Un servicio externo no está disponible ahora. Intenta de nuevo.",
+    RATE_LIMITED: "El servicio está recibiendo demasiadas solicitudes. Intenta de nuevo en unos momentos.",
+  };
+
+  return messages[code];
 }
 
 export function createChatSession(
@@ -349,7 +364,7 @@ export function createChatSession(
     }
 
     if (parsed.type === "error") {
-      markPendingAsError(parsed.error?.message ?? "El servidor respondió con un error.");
+      markPendingAsError(userFacingError(parsed.error.code));
       retryCandidate = pendingMessage ?? retryCandidate;
       pendingMessage = null;
       return;

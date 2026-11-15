@@ -83,4 +83,28 @@ describe("ChatPanel with real ChatState", () => {
     expect(clearError).toHaveBeenCalledTimes(1);
     expect(retryLastMessage).toHaveBeenCalledTimes(1);
   });
+
+  it("renders friendly recoverable copy for each agent error state", () => {
+    const messages = [
+      "El servicio está recibiendo demasiadas solicitudes. Intenta de nuevo en unos momentos.",
+      "El agente tardó demasiado en responder. Intenta de nuevo.",
+      "No puedo procesar ese mensaje. Prueba con una solicitud distinta.",
+      "Un servicio externo no está disponible ahora. Intenta de nuevo.",
+      "No se pudo preparar una respuesta. Intenta de nuevo.",
+    ];
+
+    for (const message of messages) {
+      const wrapper = mount(ChatPanel, {
+        props: {
+          state: createState({ status: "error", error: message }),
+          sendMessage: vi.fn<() => void>(),
+          retryLastMessage: vi.fn<() => void>(),
+          clearError: vi.fn<() => void>(),
+        },
+      });
+
+      expect(wrapper.get('[role="alert"]').text()).toContain(message);
+      expect(wrapper.get(".error-card button").text()).toContain("Try again");
+    }
+  });
 });
