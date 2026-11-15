@@ -11,3 +11,27 @@ export {
   MovieAgentError,
 } from "./movie.agent";
 export type { MovieAgentRuntime, MovieAgentTools } from "./movie.agent";
+export {
+  COMPARISON_CRITERIA,
+  ComparisonAgent,
+  ComparisonAgentError,
+  createComparisonAgent,
+  createComparisonAgentTools,
+  createConfiguredComparisonAgent,
+} from "./comparison.agent";
+export type {
+  ComparisonAgentTools,
+  ComparisonRuntime,
+  MovieForComparison,
+} from "./comparison.agent";
+export {
+  ConfiguredOrchestratorAgent,
+  ORCHESTRATOR_INSTRUCTIONS,
+  OrchestratorAgent,
+  createConfiguredOrchestratorAgent,
+  createConfiguredServerAgent,
+  createOrchestratorAgent,
+  createOrchestratorSdkTools,
+  createOrchestratorTools,
+} from "./orchestrator.agent";
+export type { OrchestratorRuntime, OrchestratorTools } from "./orchestrator.agent";

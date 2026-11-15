@@ -14,6 +14,7 @@ import {
 } from "../src/agents/movie.agent";
 import {
   createMcpClients,
+  McpClientError,
   type McpToolInvoker,
   type TmdbMcpClient,
 } from "../src/mcp/mcp.clients";
@@ -120,6 +121,22 @@ describe("movie subagent", () => {
       message: "No se pudo completar la búsqueda de películas. Intenta de nuevo.",
     });
     expect(String(failure)).not.toContain("provider secret");
+  });
+
+  it("preserves stable MCP rate limit and upstream codes without provider details", async () => {
+    for (const code of ["RATE_LIMITED", "UPSTREAM_ERROR"] as const) {
+      const agent = createAgent({
+        searchMovies: async () => { throw new McpClientError(code, "provider secret"); },
+        getMovieDetails: async () => { throw new Error("unused"); },
+        getRecommendations: async () => ({ results: [] }),
+      }, async (_prompt, tools) => {
+        await tools.searchMovies({ query: "Matrix" });
+        return "unused";
+      });
+
+      await expect(agent.run("Matrix")).rejects.toMatchObject({ code });
+      await expect(agent.run("Matrix")).rejects.not.toThrow("provider secret");
+    }
   });
 
   it("exposes exactly the three contract-backed TMDB tools to the model", () => {

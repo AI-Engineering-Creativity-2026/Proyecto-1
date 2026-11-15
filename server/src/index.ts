@@ -1,6 +1,10 @@
 import { Elysia } from "elysia";
 import { isIncomingMessage } from "@agichat/contracts";
-import { createConfiguredAgent, type AgentPort } from "./agents";
+import {
+  createConfiguredServerAgent,
+  type AgentEnvironment,
+  type AgentPort,
+} from "./agents";
 import { createChatHandler, randomLatency } from "./handlers";
 import { IncomingMessageSchema, OutgoingMessageSchema } from "./schemas";
 
@@ -9,6 +13,7 @@ interface AppOptions {
   allowedOrigins?: string[];
   agent?: AgentPort;
   agentTimeoutMs?: number;
+  environment?: AgentEnvironment;
 }
 
 function genericError(conversationId: string) {
@@ -21,7 +26,9 @@ function genericError(conversationId: string) {
 }
 
 export function createApp(options: AppOptions = {}) {
-  const handler = createChatHandler(options.agent ?? createConfiguredAgent(), {
+  const environment = options.environment ?? process.env;
+  const agent = options.agent ?? createConfiguredServerAgent(environment);
+  const handler = createChatHandler(agent, {
     agentTimeoutMs:
       options.agentTimeoutMs ?? Number(process.env.AGENT_TIMEOUT_MS ?? 30_000),
   });
