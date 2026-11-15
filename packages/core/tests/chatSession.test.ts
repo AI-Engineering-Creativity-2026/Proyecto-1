@@ -227,6 +227,46 @@ describe("createChatSession", () => {
       role: "agent",
       content: "Respuesta con **Markdown**",
     });
+    expect(session.state.value.messages[1].attachments).toBeUndefined();
+    expect(session.state.value.messages[1].providers).toBeUndefined();
+  });
+
+  it("preserves optional attachments and providers from agent messages", () => {
+    const sockets: FakeWebSocket[] = [];
+    const session = createChatSession(
+      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      {
+        socketFactory: createSocketFactory(sockets),
+        now: () => "2026-08-13T10:00:00.000Z",
+        createId: createIdFactory(),
+      },
+    );
+
+    sockets[0].open();
+    session.sendMessage("Recomiéndame una película");
+    sockets[0].emitMessage(JSON.stringify({
+      type: "agent_message",
+      conversationId: "conv-1",
+      content: "Una recomendación",
+      attachments: [{
+        type: "poster",
+        url: "https://image.tmdb.org/t/p/w500/poster.jpg",
+        alt: "Póster de ejemplo",
+        title: "Película de ejemplo",
+      }],
+      providers: ["tmdb", "google_books"],
+      timestamp: "2026-08-13T10:00:01.000Z",
+    }));
+
+    expect(session.state.value.messages[1].role).toBe("agent");
+    expect(session.state.value.messages[1].content).toBe("Una recomendación");
+    expect(session.state.value.messages[1].attachments).toEqual([{
+        type: "poster",
+        url: "https://image.tmdb.org/t/p/w500/poster.jpg",
+        alt: "Póster de ejemplo",
+        title: "Película de ejemplo",
+    }]);
+    expect(session.state.value.messages[1].providers).toEqual(["tmdb", "google_books"]);
   });
 
   it("retries reconnection with backoff before failing definitively", () => {
