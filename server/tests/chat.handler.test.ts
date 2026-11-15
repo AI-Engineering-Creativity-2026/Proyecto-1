@@ -61,6 +61,19 @@ describe("createChatHandler", () => {
     });
   });
 
+  it("marks Google Books as the provider for the deterministic book fixture", async () => {
+    const handler = createChatHandler(new MockAgent());
+    const responses = await handler.onOutgoingMessage({
+      ...validMessage,
+      content: "__books__",
+    });
+
+    expect(responses[1]).toMatchObject({
+      type: "agent_message",
+      providers: ["google_books"],
+    });
+  });
+
   it("converts an unresponsive agent into AGENT_TIMEOUT", async () => {
     const handler = createChatHandler(
       { respond: () => new Promise(() => {}) },

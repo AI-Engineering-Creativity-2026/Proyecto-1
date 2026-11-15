@@ -5,6 +5,7 @@ import type { Message } from "@agichat/core";
 import { renderMarkdown } from "../utils/markdown";
 import { isAllowedPosterUrl } from "../utils/posters";
 import AgentAvatar from "./AgentAvatar.vue";
+import ProviderAttribution from "./ProviderAttribution.vue";
 
 defineProps<{
   message: Message;
@@ -65,6 +66,10 @@ function handlePosterError(index: number): void {
           <figcaption v-if="attachment.title">{{ attachment.title }}</figcaption>
         </figure>
       </div>
+      <ProviderAttribution
+        v-if="message.role === 'agent' && message.providers?.length"
+        :providers="message.providers"
+      />
       <div class="message__meta">
         <span>{{ formatTime(message.timestamp) }}</span>
         <span v-if="message.status === 'sent'" class="message__sent" aria-label="Sent">
