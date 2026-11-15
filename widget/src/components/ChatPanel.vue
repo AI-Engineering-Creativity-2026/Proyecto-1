@@ -29,9 +29,8 @@ const externalLinkName = computed(() =>
   props.externalAction?.source === "imdb" ? "IMDb" : "Google Books",
 );
 const suggestions = [
-  "Explain my latest invoice",
-  "Update my account details",
-  "Talk to a support specialist",
+  "Recommend a movie based on my favorite genres.",
+  "Compare Dune with the book it is based on.",
 ] as const;
 
 function submitMessage(message: string): void {
@@ -68,9 +67,13 @@ function retryMessage(): void {
         <div class="empty-state__copy">
           <p class="eyebrow">YOUR AI GUIDE</p>
           <h3>Hi, I’m Nova.</h3>
-          <p>Ask me anything about your account, billing, or getting started.</p>
+          <p>Get a movie recommendation or compare a film with its book.</p>
         </div>
-        <div class="suggestions" aria-label="Suggested questions">
+        <div
+          class="suggestions"
+          role="group"
+          aria-label="Suggested movie and book questions"
+        >
           <SuggestionButton
             v-for="suggestion in suggestions"
             :key="suggestion"
