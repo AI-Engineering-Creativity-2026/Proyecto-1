@@ -6,6 +6,7 @@ import {
   ComparisonAgentError,
   createComparisonAgentTools,
   createConfiguredComparisonAgent,
+  type ComparisonAssessment,
   type ComparisonRuntime,
   type MovieForComparison,
 } from "../src/agents/comparison.agent";
@@ -50,11 +51,30 @@ function createClients(searchFixture: string) {
   });
 }
 
-const mockRuntime: ComparisonRuntime = async (_movie, book) =>
-  `Criterios considerados: fidelidad, personajes, temas y adaptación. Libro: ${book.title}. Veredicto: Vale la pena verla.`;
+const mockRuntime: ComparisonRuntime = async (movieData, bookData) => ({
+  relationship: "related_analysis",
+  verdict: "worth_watching",
+  evidence: {
+    premise: { movie: movieData.overview, book: bookData.description.slice(0, 75) },
+    characters: { movie: "Neo escapes the Matrix.", book: "" },
+    themes: { movie: movieData.overview, book: bookData.description.slice(0, 75) },
+    adaptation: { movie: "", book: "" },
+  },
+});
+
+const assessmentWithoutEvidence: ComparisonAssessment = {
+  relationship: "uncertain",
+  verdict: "not_worth_watching",
+  evidence: {
+    premise: { movie: "", book: "" },
+    characters: { movie: "", book: "" },
+    themes: { movie: "", book: "" },
+    adaptation: { movie: "", book: "" },
+  },
+};
 
 describe("comparison subagent", () => {
-  it("uses Google Books MCP and returns an explicit verdict based on fixture data", async () => {
+  it("uses Google Books MCP and always renders a required worth-watching verdict", async () => {
     const clients = createClients("books/search_books.json");
     const calls: string[] = [];
     const books: BooksMcpClient = {
@@ -73,7 +93,11 @@ describe("comparison subagent", () => {
       return mockRuntime(movieData, bookData);
     });
 
-    await expect(agent.run(movie)).resolves.toContain("Veredicto: Vale la pena verla.");
+    const response = await agent.run(movie);
+    expect(response).toContain("El libro encontrado es análisis o comentario");
+    expect(response).toContain("**Veredicto: Vale la pena verla.**");
+    expect(response).toContain("Sin evidencia textual suficiente.");
+    expect(response).not.toContain("Neo escapes the Matrix");
     expect(calls).toEqual([
       "search:The Matrix",
       "details:zyTCAlFPjgYC",
@@ -86,7 +110,7 @@ describe("comparison subagent", () => {
     let runtimeCalls = 0;
     const agent = new ComparisonAgent(clients.books, async () => {
       runtimeCalls += 1;
-      return "No debe ejecutarse";
+      return assessmentWithoutEvidence;
     });
 
     await expect(agent.run(movie)).resolves.toContain("No encontré un libro asociado");
@@ -102,7 +126,7 @@ describe("comparison subagent", () => {
         return { results: [] };
       },
       getBookDetails: async () => { throw new Error("unused"); },
-    }, async () => "unused");
+    }, async () => assessmentWithoutEvidence);
 
     await expect(agent.run({ ...movie, title: " " })).rejects.toMatchObject({
       code: "INVALID_MESSAGE",
@@ -114,7 +138,7 @@ describe("comparison subagent", () => {
     const agent = new ComparisonAgent({
       searchBooks: async () => { throw new Error("provider secret"); },
       getBookDetails: async () => { throw new Error("unused"); },
-    }, async () => "unused");
+    }, async () => assessmentWithoutEvidence);
 
     let failure: unknown;
     try {
@@ -134,7 +158,7 @@ describe("comparison subagent", () => {
     expect(COMPARISON_CRITERIA).toHaveLength(4);
     expect(COMPARISON_CRITERIA.join(" ")).toContain("Temas y mensaje");
     expect(COMPARISON_INSTRUCTIONS).toContain("no uses conocimiento externo");
-    expect(COMPARISON_INSTRUCTIONS).toContain("no hay información suficiente");
+    expect(COMPARISON_INSTRUCTIONS).toContain("devuelve una cadena vacía");
 
     const books = createComparisonAgentTools({
       searchBooks: async () => ({ results: [] }),

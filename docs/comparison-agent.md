@@ -8,10 +8,15 @@ genera una comparación con esos datos.
 
 La búsqueda por título no demuestra que el libro sea la fuente de la película.
 El agente debe aclarar esa limitación cuando no exista evidencia explícita y no
-presentar coincidencias de título como adaptaciones confirmadas. El modelo solo
-puede usar los campos recibidos de la película y del libro; debe marcar como
-insuficiente cualquier criterio que esos campos no permitan evaluar, sin añadir
-datos de su conocimiento previo.
+presentar coincidencias de título como adaptaciones confirmadas. La respuesta
+clasifica la relación por separado del veredicto de la película: que el libro
+sea un ensayo o comentario no responde si vale la pena ver la película.
+
+El modelo devuelve un objeto estructurado con la relación, un veredicto
+obligatorio y citas breves por criterio. El servidor renderiza el veredicto con
+una plantilla fija y solo conserva citas que aparecen textualmente en el resumen
+de la película o la descripción del libro. Evidencia ausente o no coincidente se
+muestra como insuficiente; no se completa con conocimiento previo del modelo.
 
 ## Criterios de comparación
 
