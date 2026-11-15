@@ -1,5 +1,9 @@
 import { readonly, ref, type Ref } from "vue";
-import { isIncomingMessage, type AgentMessage } from "@agichat/contracts";
+import {
+  isIncomingMessage,
+  type AgentMessage,
+  type UiAction,
+} from "@agichat/contracts";
 
 import type { ChatState, Message } from "../types/chat";
 
@@ -43,6 +47,7 @@ export interface Scheduler {
 export interface ChatSessionOptions {
   conversationId: string;
   apiUrl: string;
+  onAction?: (action: UiAction["action"]) => void;
 }
 
 export interface ChatSessionDependencies {
@@ -100,6 +105,26 @@ function cloneMessages(messages: Message[]): Message[] {
 
 function isValidIsoTimestamp(timestamp: string): boolean {
   return !Number.isNaN(Date.parse(timestamp)) && timestamp.includes("T");
+}
+
+function isAllowedUiAction(action: UiAction["action"]): boolean {
+  const expectedHost = action.source === "imdb"
+    ? "www.imdb.com"
+    : "books.google.com";
+
+  try {
+    const url = new URL(action.url);
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname === expectedHost &&
+      url.port === "" &&
+      url.username === "" &&
+      url.password === ""
+    );
+  } catch {
+    return false;
+  }
 }
 
 function createUserMessage(id: string, content: string, timestamp: string): Message {
@@ -313,6 +338,13 @@ export function createChatSession(
     }
 
     if (parsed.type === "ui_action") {
+      if (isAllowedUiAction(parsed.action)) {
+        try {
+          options.onAction?.(parsed.action);
+        } catch {
+          // Consumer callback errors must not interrupt the chat session.
+        }
+      }
       return;
     }
 

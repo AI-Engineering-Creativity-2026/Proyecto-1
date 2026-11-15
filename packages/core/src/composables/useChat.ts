@@ -1,6 +1,8 @@
 import type { Ref } from "vue";
 import { onScopeDispose } from "vue";
 
+import type { UiAction } from "@agichat/contracts";
+
 import type { ChatState } from "../types/chat";
 import { createChatSession } from "../services/chatSession";
 
@@ -8,6 +10,7 @@ export interface UseChatOptions {
   conversationId: string;
   apiUrl: string;
   clientTimeoutMs?: number;
+  onAction?: (action: UiAction["action"]) => void;
 }
 
 export interface UseChatReturn {
@@ -18,11 +21,14 @@ export interface UseChatReturn {
 }
 
 export function useChat(options: UseChatOptions): UseChatReturn {
-  const session = createChatSession({
-    conversationId: options.conversationId,
-    apiUrl: options.apiUrl,
-    responseTimeoutMs: options.clientTimeoutMs ?? 45_000,
-  });
+  const session = createChatSession(
+    {
+      conversationId: options.conversationId,
+      apiUrl: options.apiUrl,
+      onAction: options.onAction,
+    },
+    { responseTimeoutMs: options.clientTimeoutMs ?? 45_000 },
+  );
 
   onScopeDispose(session.dispose);
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import type { UiAction } from "@agichat/contracts";
 
 import type {
   Scheduler,
@@ -410,27 +411,91 @@ describe("createChatSession", () => {
     expect(session.state.value.status).toBe("idle");
   });
 
-  it("ignores valid ui_action events without changing chat history", () => {
+  it("delivers allowlisted ui_action events without adding them to chat history", () => {
     const sockets: FakeWebSocket[] = [];
+    const actions: UiAction["action"][] = [];
     const session = createChatSession(
-      { conversationId: "conv-1", apiUrl: "ws://mock" },
+      {
+        conversationId: "conv-1",
+        apiUrl: "ws://mock",
+        onAction: (action) => actions.push(action),
+      },
       { socketFactory: createSocketFactory(sockets) },
     );
 
     sockets[0].open();
+    const action: UiAction["action"] = {
+      kind: "open_url",
+      url: "https://www.imdb.com/title/tt0000001/",
+      source: "imdb",
+      reason: "Recomendación de prueba",
+    };
+    const booksAction: UiAction["action"] = {
+      kind: "open_url",
+      url: "https://books.google.com/books?id=volume-1",
+      source: "google_books",
+    };
     sockets[0].emitMessage(JSON.stringify({
       type: "ui_action",
       conversationId: "conv-1",
       timestamp: "2026-08-13T10:00:00.000Z",
-      action: {
-        kind: "open_url",
-        url: "https://www.imdb.com/title/tt0000001/",
-        source: "imdb",
-      },
+      action,
+    }));
+    sockets[0].emitMessage(JSON.stringify({
+      type: "ui_action",
+      conversationId: "conv-1",
+      timestamp: "2026-08-13T10:00:00.000Z",
+      action: booksAction,
     }));
 
+    expect(actions).toEqual([action, booksAction]);
     expect(session.state.value.messages).toHaveLength(0);
     expect(session.state.value.error).toBeNull();
+    expect(session.state.value.status).toBe("idle");
+  });
+
+  it("silently ignores ui_action URLs outside the allowlist or mismatched with their source", () => {
+    const sockets: FakeWebSocket[] = [];
+    const actions: UiAction["action"][] = [];
+    const session = createChatSession(
+      {
+        conversationId: "conv-1",
+        apiUrl: "ws://mock",
+        onAction: (action) => actions.push(action),
+      },
+      { socketFactory: createSocketFactory(sockets) },
+    );
+
+    sockets[0].open();
+    for (const action of [
+      {
+        kind: "open_url",
+        url: "https://attacker.example/title/tt0000001/",
+        source: "imdb",
+      },
+      {
+        kind: "open_url",
+        url: "https://books.google.com/books?id=volume-1",
+        source: "imdb",
+      },
+      {
+        kind: "open_url",
+        url: "http://www.imdb.com/title/tt0000001/",
+        source: "imdb",
+      },
+    ]) {
+      sockets[0].emitMessage(JSON.stringify({
+        type: "ui_action",
+        conversationId: "conv-1",
+        timestamp: "2026-08-13T10:00:00.000Z",
+        action,
+      }));
+    }
+
+    expect(actions).toEqual([]);
+    expect(session.state.value.messages).toHaveLength(0);
+    expect(session.state.value.error).toBeNull();
+    expect(session.state.value.status).toBe("idle");
   });
 
   it("marks the pending message as an error when the client timeout expires", () => {
