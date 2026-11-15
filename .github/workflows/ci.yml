@@ -56,3 +56,102 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  mcp-shared:
+    name: MCP shared tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Instalar dependencias reproduciblemente
+        run: bun ci
+
+      - name: Probar módulo compartido sin red externa
+        run: bun test --preload ./scripts/block-external-network.ts packages/mcp-shared/tests
+
+  tmdb-mcp:
+    name: TMDB MCP tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Instalar dependencias reproduciblemente
+        run: bun ci
+
+      - name: Probar TMDB MCP y fixtures de contrato sin red externa
+        run: bun test --preload ./scripts/block-external-network.ts servers/tmdb-mcp/tests server/tests/mcp-fixtures.test.ts
+
+  books-mcp:
+    name: Books MCP tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Instalar dependencias reproduciblemente
+        run: bun ci
+
+      - name: Probar Books MCP y fixtures de contrato sin red externa
+        run: bun test --preload ./scripts/block-external-network.ts servers/books-mcp/tests server/tests/mcp-fixtures.test.ts
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Buscar credenciales y tokens de proveedores
+        shell: bash
+        run: |
+          if git grep -nEI 'gsk_[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{20,}|api_key=[^$[:space:]]{8,}|TMDB_API_(KEY|READ_ACCESS_TOKEN)=[^$[:space:]]{8,}|GROQ_API_KEY=[^$[:space:]]{8,}|GOOGLE_BOOKS_API_KEY=[^$[:space:]]{8,}'; then
+            echo "Se encontró un posible secreto en los archivos versionados."
+            exit 1
+          fi
+
+  compose:
+    name: Compose validation (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: server
+            dockerfile: server/Dockerfile
+          - service: widget
+            dockerfile: widget/Dockerfile
+          - service: tmdb-mcp
+            dockerfile: servers/tmdb-mcp/Dockerfile
+          - service: books-mcp
+            dockerfile: servers/books-mcp/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validar configuración de Compose sin credenciales
+        run: docker compose --env-file /dev/null config
+
+      - name: Construir imagen sin publicar ni usar secretos
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          tags: agichat/${{ matrix.service }}:ci
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
