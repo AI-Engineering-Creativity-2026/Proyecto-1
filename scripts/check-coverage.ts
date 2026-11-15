@@ -12,10 +12,14 @@ interface CoverageTotals {
   statementsHit: number;
 }
 
+interface CoverageScope {
+  totals: CoverageTotals;
+  lines: Map<string, boolean>;
+}
+
 function addRecordTotals(
-  totals: CoverageTotals,
+  scope: CoverageScope,
   record: string,
-  lines: Map<string, boolean>,
 ): void {
   let file = "unknown";
 
@@ -33,19 +37,19 @@ function addRecordTotals(
     if (metric === "DA") {
       const [lineNumber, hitCount] = rawValue.split(",");
       if (lineNumber !== undefined && hitCount !== undefined) {
-        lines.set(`${file}:${lineNumber}`, Number(hitCount) > 0);
+        scope.lines.set(`${file}:${lineNumber}`, Number(hitCount) > 0);
       }
       continue;
     }
 
     if (!Number.isFinite(value)) continue;
 
-    if (metric === "FNF") totals.functionsFound += value;
-    if (metric === "FNH") totals.functionsHit += value;
-    if (metric === "BRF") totals.branchesFound += value;
-    if (metric === "BRH") totals.branchesHit += value;
-    if (metric === "LF") totals.statementsFound += value;
-    if (metric === "LH") totals.statementsHit += value;
+    if (metric === "FNF") scope.totals.functionsFound += value;
+    if (metric === "FNH") scope.totals.functionsHit += value;
+    if (metric === "BRF") scope.totals.branchesFound += value;
+    if (metric === "BRH") scope.totals.branchesHit += value;
+    if (metric === "LF") scope.totals.statementsFound += value;
+    if (metric === "LH") scope.totals.statementsHit += value;
   }
 }
 
@@ -53,46 +57,90 @@ function percentage(hit: number, found: number): number {
   return found === 0 ? 100 : (hit / found) * 100;
 }
 
-const totals: CoverageTotals = {
-  functionsFound: 0,
-  functionsHit: 0,
-  branchesFound: 0,
-  branchesHit: 0,
-  statementsFound: 0,
-  statementsHit: 0,
+function createScope(): CoverageScope {
+  return {
+    totals: {
+      functionsFound: 0,
+      functionsHit: 0,
+      branchesFound: 0,
+      branchesHit: 0,
+      statementsFound: 0,
+      statementsHit: 0,
+    },
+    lines: new Map(),
+  };
+}
+
+function measuresFor(scope: CoverageScope) {
+  return {
+    lines: percentage(
+      [...scope.lines.values()].filter(Boolean).length,
+      scope.lines.size,
+    ),
+    functions: percentage(scope.totals.functionsHit, scope.totals.functionsFound),
+    branches: percentage(scope.totals.branchesHit, scope.totals.branchesFound),
+    statements: percentage(scope.totals.statementsHit, scope.totals.statementsFound),
+  };
+}
+
+const scopes = {
+  global: createScope(),
+  core: createScope(),
+  widget: createScope(),
 };
-const lines = new Map<string, boolean>();
 
 let coverage: string;
 
-const coverageFiles = [coverageFile, "coverage/widget/lcov.info"].filter(existsSync);
+const widgetCoverageFile = "coverage/widget/lcov.info";
+const coverageFiles = [coverageFile, widgetCoverageFile].filter(existsSync);
 if (coverageFiles.length === 0) {
   console.error(`No se encontró el reporte de cobertura: ${coverageFile}`);
   process.exit(1);
 }
 
-for (const file of coverageFiles) {
-  coverage = readFileSync(file, "utf8");
+for (const reportFile of coverageFiles) {
+  coverage = readFileSync(reportFile, "utf8");
   for (const record of coverage.split("end_of_record")) {
-    addRecordTotals(totals, record, lines);
+    const source = record.match(/^SF:(.+)$/m)?.[1]?.replaceAll("\\", "/") ?? "";
+    addRecordTotals(scopes.global, record);
+
+    if (source.includes("packages/core/src/")) {
+      addRecordTotals(scopes.core, record);
+    }
+
+    if (
+      reportFile === widgetCoverageFile ||
+      source.includes("widget/src/")
+    ) {
+      addRecordTotals(scopes.widget, record);
+    }
   }
 }
 
 const measures = {
-  lines: percentage(
-    [...lines.values()].filter(Boolean).length,
-    lines.size,
-  ),
-  functions: percentage(totals.functionsHit, totals.functionsFound),
-  branches: percentage(totals.branchesHit, totals.branchesFound),
-  statements: percentage(totals.statementsHit, totals.statementsFound),
+  global: measuresFor(scopes.global),
+  core: measuresFor(scopes.core),
+  widget: measuresFor(scopes.widget),
 };
 
-console.log(
-  `Cobertura: líneas ${measures.lines.toFixed(2)}%, funciones ${measures.functions.toFixed(2)}%, ramas ${measures.branches.toFixed(2)}%, sentencias ${measures.statements.toFixed(2)}%`,
+for (const [name, scope] of Object.entries(measures)) {
+  console.log(
+    `Cobertura ${name}: líneas ${scope.lines.toFixed(2)}%, funciones ${scope.functions.toFixed(2)}%, ramas ${scope.branches.toFixed(2)}%, sentencias ${scope.statements.toFixed(2)}%`,
+  );
+}
+
+const missingScope =
+  scopes.core.lines.size === 0 ||
+  scopes.widget.lines.size === 0 ||
+  scopes.core.totals.statementsFound === 0 ||
+  scopes.widget.totals.statementsFound === 0;
+const belowMinimum = Object.values(measures).some((scopeMeasures) =>
+  Object.values(scopeMeasures).some((value) => value < minimumCoverage)
 );
 
-if (Object.values(measures).some((value) => value < minimumCoverage)) {
-  console.error(`La cobertura mínima requerida es ${minimumCoverage}%.`);
+if (missingScope || belowMinimum) {
+  console.error(
+    `La cobertura global, de Core y del widget debe alcanzar ${minimumCoverage}% en todas las métricas.`,
+  );
   process.exit(1);
 }
