@@ -328,6 +328,61 @@ button {
   border-radius: 16px 7px 16px 16px;
 }
 
+.message__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.poster-card {
+  width: min(100%, 180px);
+  margin: 0;
+  overflow: hidden;
+  color: #52645b;
+  background: #f1f3ef;
+  border: 1px solid #e3e9e3;
+  border-radius: 10px;
+}
+
+.poster-card > img {
+  display: block;
+  width: 100%;
+  max-height: 270px;
+  object-fit: cover;
+}
+
+.poster-card__fallback {
+  display: grid;
+  gap: 0.6rem;
+  place-content: center;
+  justify-items: center;
+  min-height: 200px;
+  aspect-ratio: 2 / 3;
+  padding: 1rem;
+  color: #708078;
+  text-align: center;
+  background: linear-gradient(145deg, #f5f6f2, #e5ebe5);
+}
+
+.poster-card__fallback svg {
+  width: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.poster-card__fallback span,
+.poster-card figcaption {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.poster-card figcaption {
+  padding: 0.5rem 0.6rem;
+}
+
 .message__bubble p,
 .message__bubble ul,
 .message__bubble ol,

@@ -1,18 +1,28 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import type { Message } from "@agichat/core";
 
 import { renderMarkdown } from "../utils/markdown";
+import { isAllowedPosterUrl } from "../utils/posters";
 import AgentAvatar from "./AgentAvatar.vue";
 
 defineProps<{
   message: Message;
 }>();
 
+const failedPosterIndexes = ref<number[]>([]);
+
 function formatTime(timestamp: string): string {
   return new Intl.DateTimeFormat("en", {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(timestamp));
+}
+
+function handlePosterError(index: number): void {
+  if (!failedPosterIndexes.value.includes(index)) {
+    failedPosterIndexes.value.push(index);
+  }
 }
 </script>
 
@@ -21,6 +31,39 @@ function formatTime(timestamp: string): string {
     <AgentAvatar v-if="message.role === 'agent'" label="Nova" />
     <div class="message__content">
       <div class="message__bubble markdown-content" v-html="renderMarkdown(message.content)">
+      </div>
+      <div
+        v-if="message.role === 'agent' && message.attachments?.length"
+        class="message__attachments"
+      >
+        <figure
+          v-for="(attachment, index) in message.attachments"
+          :key="`${message.id}-${index}`"
+          class="poster-card"
+        >
+          <img
+            v-if="isAllowedPosterUrl(attachment.url) && !failedPosterIndexes.includes(index)"
+            :src="attachment.url"
+            :alt="attachment.alt || attachment.title || 'Movie poster'"
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+            @error="handlePosterError(index)"
+          >
+          <div
+            v-else
+            class="poster-card__fallback"
+            role="img"
+            :aria-label="`${attachment.alt || attachment.title || 'Movie poster'}; poster unavailable`"
+          >
+            <svg viewBox="0 0 32 32" aria-hidden="true">
+              <rect x="6" y="4" width="20" height="24" rx="3" />
+              <path d="M11 10h10M11 15h10M11 20h6" />
+            </svg>
+            <span>Poster unavailable</span>
+          </div>
+          <figcaption v-if="attachment.title">{{ attachment.title }}</figcaption>
+        </figure>
       </div>
       <div class="message__meta">
         <span>{{ formatTime(message.timestamp) }}</span>

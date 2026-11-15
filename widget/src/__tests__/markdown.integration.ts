@@ -10,13 +10,13 @@ describe("renderMarkdown", () => {
     expect(html).toContain("<ul>");
   });
 
-  it("sanitizes unsafe HTML from agent content", () => {
+  it("sanitizes unsafe HTML and leaves images to allowlisted attachments", () => {
     const html = renderMarkdown(
-      '<img src="x" onerror="alert(1)">[safe](https://example.com)',
+      '<img src="https://attacker.example/tracker.gif" onerror="alert(1)">[safe](https://example.com)',
     );
 
     expect(html).not.toContain("onerror");
-    expect(html).toContain('<img src="x">');
+    expect(html).not.toContain("<img");
     expect(html).toContain('href="https://example.com"');
   });
 });

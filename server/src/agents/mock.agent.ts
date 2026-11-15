@@ -30,7 +30,7 @@ export class MockAgent implements AgentPort {
     if (message.content.includes("__poster__")) {
       response.attachments = [{
         type: "poster",
-        url: "https://image.tmdb.org/t/p/w500/mock-poster.jpg",
+        url: "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
         alt: "Póster de película de prueba",
         title: "Película de prueba",
       }];
