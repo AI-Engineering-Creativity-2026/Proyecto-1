@@ -86,6 +86,7 @@ function measuresFor(scope: CoverageScope) {
 const scopes = {
   global: createScope(),
   core: createScope(),
+  mcp: createScope(),
   widget: createScope(),
 };
 
@@ -109,6 +110,14 @@ for (const reportFile of coverageFiles) {
     }
 
     if (
+      source.includes("packages/mcp-shared/src/") ||
+      source.includes("servers/tmdb-mcp/src/") ||
+      source.includes("servers/books-mcp/src/")
+    ) {
+      addRecordTotals(scopes.mcp, record);
+    }
+
+    if (
       reportFile === widgetCoverageFile ||
       source.includes("widget/src/")
     ) {
@@ -120,6 +129,7 @@ for (const reportFile of coverageFiles) {
 const measures = {
   global: measuresFor(scopes.global),
   core: measuresFor(scopes.core),
+  mcp: measuresFor(scopes.mcp),
   widget: measuresFor(scopes.widget),
 };
 
@@ -131,8 +141,10 @@ for (const [name, scope] of Object.entries(measures)) {
 
 const missingScope =
   scopes.core.lines.size === 0 ||
+  scopes.mcp.lines.size === 0 ||
   scopes.widget.lines.size === 0 ||
   scopes.core.totals.statementsFound === 0 ||
+  scopes.mcp.totals.statementsFound === 0 ||
   scopes.widget.totals.statementsFound === 0;
 const belowMinimum = Object.values(measures).some((scopeMeasures) =>
   Object.values(scopeMeasures).some((value) => value < minimumCoverage)
