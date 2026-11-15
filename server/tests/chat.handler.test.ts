@@ -53,7 +53,10 @@ describe("createChatHandler", () => {
     expect(responses[1]).toMatchObject({ type: "ui_action", action: { source: "imdb" } });
     expect(responses[2]).toMatchObject({
       type: "agent_message",
-      attachments: [{ type: "poster", url: "https://image.tmdb.org/t/p/w500/mock-poster.jpg" }],
+      attachments: [{
+        type: "poster",
+        url: "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
+      }],
       providers: ["tmdb"],
     });
   });

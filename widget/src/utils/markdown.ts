@@ -5,10 +5,16 @@ const sanitizerModule = DOMPurifyModule.default ?? DOMPurifyModule;
 const DOMPurify = (typeof sanitizerModule === "function"
   ? sanitizerModule(globalThis.window)
   : sanitizerModule) as {
-  sanitize: (html: string, options: { USE_PROFILES: { html: boolean } }) => string;
+  sanitize: (html: string, options: {
+    USE_PROFILES: { html: boolean };
+    FORBID_TAGS: string[];
+  }) => string;
 };
 
 export function renderMarkdown(markdown: string): string {
   const html = marked.parse(markdown, { async: false });
-  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["img"],
+  });
 }
