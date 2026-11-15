@@ -1,16 +1,77 @@
 services:
+  tmdb-mcp:
+    build:
+      context: .
+      dockerfile: servers/tmdb-mcp/Dockerfile
+    environment:
+      TMDB_MCP_PORT: "3101"
+      TMDB_API_READ_ACCESS_TOKEN: ${TMDB_API_READ_ACCESS_TOKEN:-}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      TMDB_API_LANGUAGE: ${TMDB_API_LANGUAGE:-es-MX}
+      TMDB_UPSTREAM_TIMEOUT_MS: ${TMDB_UPSTREAM_TIMEOUT_MS:-10000}
+      MCP_CACHE_TTL_MS: ${MCP_CACHE_TTL_MS:-300000}
+      MCP_CACHE_MAX_ENTRIES: ${MCP_CACHE_MAX_ENTRIES:-500}
+      TMDB_DAILY_REQUEST_LIMIT: ${TMDB_DAILY_REQUEST_LIMIT:-900}
+    expose:
+      - "3101"
+    networks:
+      - agichat-internal
+
+  books-mcp:
+    build:
+      context: .
+      dockerfile: servers/books-mcp/Dockerfile
+    environment:
+      BOOKS_MCP_PORT: "3102"
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      GOOGLE_BOOKS_UPSTREAM_TIMEOUT_MS: ${GOOGLE_BOOKS_UPSTREAM_TIMEOUT_MS:-10000}
+      MCP_CACHE_TTL_MS: ${MCP_CACHE_TTL_MS:-300000}
+      MCP_CACHE_MAX_ENTRIES: ${MCP_CACHE_MAX_ENTRIES:-500}
+      GOOGLE_BOOKS_DAILY_REQUEST_LIMIT: ${GOOGLE_BOOKS_DAILY_REQUEST_LIMIT:-900}
+    expose:
+      - "3102"
+    networks:
+      - agichat-internal
+
   server:
     build:
       context: .
       dockerfile: server/Dockerfile
+    environment:
+      PORT: "3000"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4173}
+      AGENT_MODE: ${AGENT_MODE:-mock}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-}
+      GROQ_BASE_URL: ${GROQ_BASE_URL:-}
+      AGENT_TIMEOUT_MS: ${AGENT_TIMEOUT_MS:-30000}
+      CLIENT_TIMEOUT_MS: ${CLIENT_TIMEOUT_MS:-45000}
+      TMDB_MCP_URL: http://tmdb-mcp:3101/mcp
+      BOOKS_MCP_URL: http://books-mcp:3102/mcp
+    depends_on:
+      tmdb-mcp:
+        condition: service_healthy
+      books-mcp:
+        condition: service_healthy
     ports:
       - "3000:3000"
+    networks:
+      - agichat-internal
 
-  widget-preview:
+  widget:
     build:
       context: .
       dockerfile: widget/Dockerfile
+      args:
+        VITE_AGICHAT_API_URL: ${VITE_AGICHAT_API_URL:-ws://localhost:3000/ws}
+    depends_on:
+      server:
+        condition: service_healthy
     ports:
       - "4173:4173"
-    depends_on:
-      - server
+    networks:
+      - agichat-internal
+
+networks:
+  agichat-internal:
+    driver: bridge
