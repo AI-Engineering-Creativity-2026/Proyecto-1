@@ -383,6 +383,46 @@ button {
   padding: 0.5rem 0.6rem;
 }
 
+.provider-attributions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.provider-attribution {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  align-items: center;
+  color: #65746c;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.provider-attribution--tmdb img {
+  display: block;
+  width: 34px;
+  height: auto;
+}
+
+.provider-attribution--tmdb p {
+  flex: 1 1 210px;
+  margin: 0;
+}
+
+.provider-attribution--google_books img {
+  display: block;
+  width: 105px;
+  height: auto;
+  object-fit: contain;
+}
+
+.provider-attribution--google_books a {
+  color: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .message__bubble p,
 .message__bubble ul,
 .message__bubble ol,

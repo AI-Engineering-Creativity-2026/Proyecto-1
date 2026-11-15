@@ -26,6 +26,7 @@ export class MockAgent implements AgentPort {
       content: `Recibí tu mensaje: **${message.content}**`,
       timestamp,
     };
+    const providers: ("tmdb" | "google_books")[] = [];
 
     if (message.content.includes("__poster__")) {
       response.attachments = [{
@@ -34,7 +35,15 @@ export class MockAgent implements AgentPort {
         alt: "Póster de película de prueba",
         title: "Película de prueba",
       }];
-      response.providers = ["tmdb"];
+      providers.push("tmdb");
+    }
+
+    if (message.content.includes("__books__")) {
+      providers.push("google_books");
+    }
+
+    if (providers.length > 0) {
+      response.providers = providers;
     }
 
     const events: IncomingMessage[] = [{
