@@ -1,5 +1,5 @@
 import { readonly, ref, type Ref } from "vue";
-import { isIncomingMessage } from "@agichat/contracts";
+import { isIncomingMessage, type AgentMessage } from "@agichat/contracts";
 
 import type { ChatState, Message } from "../types/chat";
 
@@ -112,12 +112,14 @@ function createUserMessage(id: string, content: string, timestamp: string): Mess
   };
 }
 
-function createAgentMessage(id: string, content: string, timestamp: string): Message {
+function createAgentMessage(id: string, message: AgentMessage): Message {
   return {
     id,
     role: "agent",
-    content,
-    timestamp,
+    content: message.content,
+    timestamp: message.timestamp,
+    ...(message.attachments === undefined ? {} : { attachments: message.attachments }),
+    ...(message.providers === undefined ? {} : { providers: message.providers }),
   };
 }
 
@@ -321,12 +323,10 @@ export function createChatSession(
       return;
     }
 
-    const content = parsed.content ?? "";
-
     patchState({
       messages: [
         ...state.value.messages,
-        createAgentMessage(`msg_${createId()}`, content, parsed.timestamp),
+        createAgentMessage(`msg_${createId()}`, parsed),
       ],
       status: "idle",
       error: null,
