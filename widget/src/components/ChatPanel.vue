@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import type { ExternalLinkAction } from "../utils/external-links";
 import type { ChatState } from "@agichat/core";
 import AgentAvatar from "./AgentAvatar.vue";
 import ChatComposer from "./ChatComposer.vue";
@@ -13,15 +14,20 @@ const props = defineProps<{
   sendMessage: (text: string) => void;
   retryLastMessage: () => void;
   clearError: () => void;
+  externalAction?: ExternalLinkAction | null;
 }>();
 
 const emit = defineEmits<{
   close: [];
+  openExternalLink: [];
 }>();
 
 const composerValue = ref("");
 const isWaiting = computed(() => props.state.status === "waiting_response");
 const hasMessages = computed(() => props.state.messages.length > 0);
+const externalLinkName = computed(() =>
+  props.externalAction?.source === "imdb" ? "IMDb" : "Google Books",
+);
 const suggestions = [
   "Explain my latest invoice",
   "Update my account details",
@@ -104,6 +110,17 @@ function retryMessage(): void {
           </div>
         </div>
       </template>
+
+      <div v-if="externalAction" class="external-link-fallback" role="status">
+        <p>Your browser blocked the pop-up. You can open the link manually.</p>
+        <button
+          type="button"
+          :aria-label="`Open ${externalLinkName} in a new tab`"
+          @click="emit('openExternalLink')"
+        >
+          Open {{ externalLinkName }}
+        </button>
+      </div>
     </div>
 
     <footer class="chat-footer">

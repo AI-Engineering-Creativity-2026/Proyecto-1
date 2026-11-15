@@ -3,15 +3,65 @@ import { useChat } from "@agichat/core";
 import { ref } from "vue";
 
 import ChatPanel from "./components/ChatPanel.vue";
+import {
+  isAllowedExternalLink,
+  type ExternalLinkAction,
+} from "./utils/external-links";
 
 const props = defineProps<{
   apiUrl: string;
   conversationId: string;
 }>();
 
+const pendingExternalAction = ref<ExternalLinkAction | null>(null);
+const activationPollIntervalMs = 50;
+const maxActivationWaitMs = 4_000;
+
+function attemptExternalOpen(action: ExternalLinkAction): void {
+  const openedWindow = window.open(action.url, "_blank");
+
+  if (!openedWindow) {
+    pendingExternalAction.value = action;
+    return;
+  }
+
+  openedWindow.opener = null;
+  pendingExternalAction.value = null;
+}
+
+function openExternalAction(action: ExternalLinkAction): void {
+  if (!isAllowedExternalLink(action)) return;
+
+  const startedAt = Date.now();
+  const waitForActivationToExpire = (): void => {
+    const isStillActive = navigator.userActivation?.isActive === true;
+
+    if (isStillActive && Date.now() - startedAt < maxActivationWaitMs) {
+      window.setTimeout(waitForActivationToExpire, activationPollIntervalMs);
+      return;
+    }
+
+    if (isStillActive) {
+      pendingExternalAction.value = action;
+      return;
+    }
+
+    attemptExternalOpen(action);
+  };
+
+  waitForActivationToExpire();
+}
+
+function retryExternalAction(): void {
+  if (pendingExternalAction.value) {
+    attemptExternalOpen(pendingExternalAction.value);
+  }
+}
+
 const chat = useChat({
   apiUrl: props.apiUrl,
   conversationId: props.conversationId,
+  onAction: openExternalAction,
 });
 
 const isOpen = ref(true);
@@ -33,7 +83,9 @@ const isOpen = ref(true);
           :send-message="chat.sendMessage"
           :retry-last-message="chat.retryLastMessage"
           :clear-error="chat.clearError"
+          :external-action="pendingExternalAction"
           @close="isOpen = false"
+          @open-external-link="retryExternalAction"
         />
       </Transition>
 

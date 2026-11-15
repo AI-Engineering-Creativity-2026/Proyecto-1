@@ -38,5 +38,11 @@ describe("AGIChat SDK helpers", () => {
     const appendedElement = appendChild.mock.calls[0]?.[0];
     expect(appendedElement).toBeDefined();
     expect((appendedElement as HTMLElement).tagName.toLowerCase()).toBe("agichat-widget");
+    expect((appendedElement as HTMLElement).getAttribute("api-url")).toBe(
+      "ws://localhost:3000/ws",
+    );
+    expect((appendedElement as HTMLElement).getAttribute("conversation-id")).toBe(
+      "conversation-test",
+    );
   });
 });
