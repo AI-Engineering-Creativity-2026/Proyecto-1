@@ -98,6 +98,30 @@ La CI aplica un gate mínimo de 80% para líneas, funciones, ramas y sentencias 
 de los reportes LCOV de Bun y Vitest. El reporte de Vitest incluye componentes `.vue`.
 Los helpers compartidos de pruebas viven en `test/helpers/`.
 
+## Docker Compose
+
+El stack completo se puede levantar desde la raíz con:
+
+```bash
+cp .env.example .env
+docker compose config
+docker compose up --build
+```
+
+El widget queda disponible en `http://localhost:4173` y el servidor en
+`http://localhost:3000`. Los servicios `tmdb-mcp` y `books-mcp` escuchan internamente
+en los puertos `3101` y `3102`; no se publican directamente al host. El servidor los
+alcanza mediante los nombres DNS de Compose (`tmdb-mcp` y `books-mcp`).
+
+Por defecto, `AGENT_MODE=mock`, por lo que el stack arranca sin claves de proveedor.
+Para activar el modo real, configura `AGENT_MODE=groq`, `GROQ_API_KEY`, `GROQ_MODEL`,
+las credenciales de TMDB y, si aplica, `GOOGLE_BOOKS_API_KEY` en el `.env` local.
+Las variables de URLs MCP se fijan dentro de Compose para usar la red interna; no
+deben apuntar a `localhost` desde el contenedor del servidor.
+
+Todos los servicios tienen healthcheck. El servidor espera a que ambos MCP estén
+saludables y el widget espera a que el servidor responda antes de iniciar.
+
 Comandos útiles por paquete:
 
 ```bash
