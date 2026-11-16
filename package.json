@@ -5,6 +5,7 @@
   "type": "module",
   "workspaces": [
     "server",
+    "evals",
     "packages/*",
     "servers/*",
     "widget"
@@ -23,11 +24,13 @@
     "test:mcp": "bun test --preload ./scripts/block-external-network.ts packages/mcp-shared/tests servers/tmdb-mcp/tests servers/books-mcp/tests server/tests/mcp-fixtures.test.ts",
     "test:server": "bun --cwd server test",
     "test:widget": "bun --cwd widget test:unit",
+    "eval:functional": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_TELEMETRY=true PROMPTFOO_DISABLE_UPDATE=true promptfoo eval -c evals/promptfooconfig.yaml --no-cache --no-progress-bar",
     "typecheck": "bun --cwd widget type-check",
     "typecheck:widget": "bun --cwd widget type-check"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "promptfoo": "0.123.1"
   },
   "peerDependencies": {
     "typescript": "^7"
