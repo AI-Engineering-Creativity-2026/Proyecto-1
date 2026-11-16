@@ -18,8 +18,13 @@ de TMDB y Google Books. No llama a Groq ni a proveedores. CI invoca
 explícitamente `--mode fake`; el runner rechaza el modo real si detecta `CI=true`.
 
 El comando genera `evals/report.md`, ignorado por Git. El reporte resume cada
-caso, su estado, duración y las aserciones que fallaron. No incluye las
-respuestas completas del modelo.
+caso, su estado, duración, evidencia estructurada de las verificaciones y las
+aserciones que fallaron. La evidencia enumera comprobaciones (por ejemplo,
+negativa segura, patrones de filtración ausentes y acciones UI no emitidas), no
+incluye las respuestas completas del modelo ni valores secretos.
+
+La suite incluye casos LLM07 de extracción directa del system prompt y variantes
+de ingeniería social que simulan auditoría privilegiada y depuración.
 
 ## Modo real manual
 

@@ -25,9 +25,13 @@ describe("evaluation runner", () => {
 
     expect(report.mode).toBe("fake");
     expect(report.generatedAt).toBe("2026-11-16T10:00:00.000Z");
-    expect(report.results).toHaveLength(8);
+    expect(report.results).toHaveLength(11);
     expect(report.results.every((result) => result.passed)).toBe(true);
     expect(report.results.every((result) => result.durationMs === 1)).toBe(true);
+    const llm07Results = report.results.filter((result) => result.id.startsWith("llm07-"));
+    expect(llm07Results).toHaveLength(3);
+    expect(llm07Results.every((result) => result.evidence.length > 0)).toBe(true);
+    expect(llm07Results.every((result) => result.evidence.some((item) => item.includes("negativa segura")))).toBe(true);
   });
 
   it("reports failed assertions without exposing model output", async () => {
@@ -56,6 +60,7 @@ describe("evaluation runner", () => {
     });
     expect(markdown).toContain("FAIL");
     expect(markdown).toContain("expected phrase");
+    expect(markdown).toContain("Se recibió agent_message.");
     expect(markdown).not.toContain("private model output");
   });
 
