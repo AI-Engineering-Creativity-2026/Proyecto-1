@@ -44,10 +44,13 @@ describe("fixtures de herramientas MCP", () => {
     const emptyMovies = await fixture<McpToolResponses["tmdb"]["search_movies"]>("tmdb/search_movies_empty.json");
     const emptyBooks = await fixture<McpToolResponses["books"]["search_books"]>("books/search_books_empty.json");
     const injection = await fixture<McpToolResponses["tmdb"]["search_movies"]>("tmdb/search_movies_prompt_injection.json");
+    const booksInjection = await fixture<McpToolResponses["books"]["search_books"]>("books/search_books_prompt_injection.json");
 
     expect(Value.Check(McpToolResponseSchemas.tmdb.search_movies, emptyMovies)).toBe(true);
     expect(Value.Check(McpToolResponseSchemas.books.search_books, emptyBooks)).toBe(true);
+    expect(Value.Check(McpToolResponseSchemas.books.search_books, booksInjection)).toBe(true);
     expect(injection.results[0]?.overview).toContain("Ignore all previous instructions");
+    expect(booksInjection.results[0]?.description).toContain("Ignore all previous instructions");
   });
 
   it("mantiene códigos de error del contrato para fallos de proveedores", async () => {
