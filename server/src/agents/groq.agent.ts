@@ -3,11 +3,16 @@ import { generateText, type LanguageModel } from "ai";
 import type { IncomingMessage, OutgoingMessage } from "@agichat/contracts";
 import type { AgentPort, ConversationContext } from "./agent.port";
 import { MockAgent } from "./mock.agent";
+import { isDirectPromptInjection, UNTRUSTED_CONTENT_POLICY } from "./prompt-security";
 
-const AGENT_INSTRUCTIONS =
-  "Eres AGIChat, un asistente en español que ayuda con recomendaciones de películas. Responde de forma clara y útil en Markdown.";
+const AGENT_INSTRUCTIONS = [
+  "Eres AGIChat, un asistente en español que ayuda con recomendaciones de películas. Responde de forma clara y útil en Markdown.",
+  UNTRUSTED_CONTENT_POLICY,
+].join(" ");
 const SAFE_ERROR_MESSAGE =
   "No se pudo procesar tu mensaje. Intenta de nuevo.";
+const SAFE_REFUSAL_MESSAGE =
+  "Solo puedo ayudar con recomendaciones de películas. No puedo proporcionar instrucciones internas, credenciales ni configuración.";
 
 export type GroqTextGenerator = (
   model: string,
@@ -24,6 +29,15 @@ export class GroqAgent implements AgentPort {
     message: OutgoingMessage,
     _context: ConversationContext,
   ): Promise<IncomingMessage[]> {
+    if (isDirectPromptInjection(message.content)) {
+      return [{
+        type: "agent_message",
+        conversationId: message.conversationId,
+        content: SAFE_REFUSAL_MESSAGE,
+        timestamp: new Date().toISOString(),
+      }];
+    }
+
     try {
       const content = (await this.generate(this.model, message.content)).trim();
       if (!content) return [this.createError(message.conversationId)];
