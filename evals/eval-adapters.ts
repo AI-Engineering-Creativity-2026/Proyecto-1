@@ -3,8 +3,10 @@ import { runFunctionalCase } from "./run-functional-case";
 import {
   validatedMessages,
   type EvalAdapter,
+  type EvalCase,
   type EvalObservation,
 } from "./evaluation-runner";
+import { runSecurityEvalCase } from "./security-eval-cases";
 
 export type EvalWebSocket = Pick<WebSocket, "addEventListener" | "send" | "close">;
 export type EvalWebSocketFactory = (url: string) => EvalWebSocket;
@@ -12,8 +14,10 @@ export type EvalWebSocketFactory = (url: string) => EvalWebSocket;
 export function createFakeEvalAdapter(): EvalAdapter {
   return {
     mode: "fake",
-    async run(prompt): Promise<EvalObservation> {
-      const result = await runFunctionalCase(prompt);
+    async run(testCase: EvalCase): Promise<EvalObservation> {
+      const scenario = testCase.scenario ?? "functional";
+      if (scenario !== "functional") return runSecurityEvalCase(scenario, testCase.prompt);
+      const result = await runFunctionalCase(testCase.prompt);
       return { messages: result.messages, toolCalls: result.calls };
     },
   };
@@ -26,7 +30,8 @@ export function createWebSocketEvalAdapter(
 ): EvalAdapter {
   return {
     mode: "real",
-    run: (prompt) => runWebSocketCase(prompt, url, timeoutMs, socketFactory),
+    supports: (testCase) => testCase.scenario !== "indirect-tmdb" && testCase.scenario !== "indirect-books",
+    run: (testCase) => runWebSocketCase(testCase.prompt, url, timeoutMs, socketFactory),
   };
 }
 

@@ -73,11 +73,13 @@ async function main(args: readonly string[]): Promise<number> {
   await mkdir(dirname(options.outputPath), { recursive: true });
   await Bun.write(options.outputPath, markdown);
   const passed = report.results.filter((result) => result.passed).length;
-  console.log(`Evals ${report.mode}: ${passed}/${report.results.length} aprobados. Reporte: ${options.outputPath}`);
+  const skipped = report.results.filter((result) => result.skipped).length;
+  const failed = report.results.length - passed - skipped;
+  console.log(`Evals ${report.mode}: ${passed} aprobados, ${failed} fallidos, ${skipped} omitidos. Reporte: ${options.outputPath}`);
   for (const result of report.results.filter((item) => !item.passed)) {
     console.error(`${result.id}: ${result.failures.join("; ")}`);
   }
-  return passed === report.results.length ? 0 : 1;
+  return failed === 0 ? 0 : 1;
 }
 
 if (import.meta.main) {

@@ -35,7 +35,10 @@ docker compose down
 
 El runner se conecta a `ws://localhost:3000/ws`; se puede cambiar con
 `AGICHAT_EVAL_WS_URL`. Este modo envía los casos versionados al agente real y
-puede consumir solicitudes de Groq, TMDB y Google Books. Nunca se usa en CI.
+puede consumir solicitudes de Groq, TMDB y Google Books. Los casos indirectos
+que requieren inyectar fixtures sintéticos de TMDB o Books se marcan como
+`SKIP`; se ejecutan en modo falso para reproducibilidad. Nunca se usa modo real
+en CI.
 
 Usa `--cases` para seleccionar otro archivo versión 1 y `--output` para elegir
 la ruta del reporte. Si una aserción falla, el proceso termina con código no

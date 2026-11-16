@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createWebSocketEvalAdapter, type EvalWebSocket } from "./eval-adapters";
+import type { EvalCase } from "./evaluation-runner";
 
 class FakeWebSocket extends EventTarget implements EvalWebSocket {
   readonly sent: string[] = [];
@@ -29,7 +30,7 @@ describe("WebSocket eval adapter", () => {
   it("sends the prompt and collects contract-valid events until the final answer", async () => {
     const socket = new FakeWebSocket();
     const adapter = createWebSocketEvalAdapter("ws://test.local/ws", 1000, () => socket);
-    const pending = adapter.run("Recommend a movie");
+    const pending = adapter.run(createCase("Recommend a movie"));
 
     socket.open();
     const sent: unknown = JSON.parse(socket.sent[0] ?? "null");
@@ -56,7 +57,7 @@ describe("WebSocket eval adapter", () => {
   it("rejects malformed server events instead of accepting them into an evaluation", async () => {
     const socket = new FakeWebSocket();
     const adapter = createWebSocketEvalAdapter("ws://test.local/ws", 1000, () => socket);
-    const pending = adapter.run("Recommend a movie");
+    const pending = adapter.run(createCase("Recommend a movie"));
     socket.open();
     socket.receive({ type: "agent_message", conversationId: "wrong-payload" });
 
@@ -68,7 +69,7 @@ describe("WebSocket eval adapter", () => {
     const socket = new FakeWebSocket();
     socket.failSend = true;
     const adapter = createWebSocketEvalAdapter("ws://test.local/ws", 1000, () => socket);
-    const pending = adapter.run("Recommend a movie");
+    const pending = adapter.run(createCase("Recommend a movie"));
     socket.open();
 
     await expect(pending).rejects.toThrow("No se pudo enviar el caso");
@@ -82,4 +83,13 @@ function readConversationId(value: unknown): string {
     return value.conversationId;
   }
   throw new Error("The adapter did not send a conversation ID.");
+}
+
+function createCase(prompt: string): EvalCase {
+  return {
+    id: "adapter-test",
+    description: "WebSocket adapter test",
+    prompt,
+    assertions: {},
+  };
 }
