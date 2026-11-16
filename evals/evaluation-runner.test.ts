@@ -64,6 +64,31 @@ describe("evaluation runner", () => {
     expect(markdown).not.toContain("private model output");
   });
 
+  it("preserves stable error-code evidence without exposing error details", async () => {
+    const testCase: EvalCase = {
+      id: "upstream-error-evidence",
+      description: "Records a safe provider failure classification",
+      prompt: "Recommend a movie",
+      assertions: { requireAgentMessage: true },
+    };
+    const report = await runEvalSuite([testCase], {
+      mode: "real",
+      run: async () => ({
+        messages: [{
+          type: "error",
+          conversationId: "eval",
+          error: { code: "UPSTREAM_ERROR", message: "private provider response body" },
+          timestamp: "2026-11-16T10:00:00.000Z",
+        }],
+      }),
+    });
+    const markdown = renderMarkdownReport(report);
+
+    expect(report.results[0]?.evidence).toContain("El agente devolvió el error estable UPSTREAM_ERROR.");
+    expect(markdown).toContain("UPSTREAM_ERROR");
+    expect(markdown).not.toContain("private provider response body");
+  });
+
   it("rejects invalid case files and invalid WebSocket messages", () => {
     expect(() => parseEvalCaseFile({ schemaVersion: 2, cases: [] })).toThrow("esquema versión 1");
     expect(() => validatedMessages([{ type: "agent_message", conversationId: "x" }])).toThrow(

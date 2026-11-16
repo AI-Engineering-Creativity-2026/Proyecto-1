@@ -85,6 +85,102 @@ describe("TmdbService", () => {
     expect(Value.Check(McpToolResponseSchemas.tmdb.get_recommendations, recommendations)).toBe(true);
   });
 
+  test("enriquece una recomendación con su IMDb ID usando un único lookup de detalles", async () => {
+    const calls: string[] = [];
+    const service = new TmdbService({
+      fetchImpl: async (input) => {
+        const url = String(input);
+        calls.push(url);
+        if (url.includes("configuration")) {
+          return jsonResponse({ images: { secure_base_url: "https://image.tmdb.org/t/p/", poster_sizes: ["w500"] } });
+        }
+        if (url.includes("recommendations")) {
+          return jsonResponse({ results: [{ ...movie, id: 603, imdb_id: null }] });
+        }
+        if (url.endsWith("/3/movie/603?language=es-MX")) return jsonResponse(movie);
+        return jsonResponse({}, 404);
+      },
+    });
+
+    const result = await service.getRecommendations("603");
+
+    expect(result.results[0]?.imdb_id).toBe("tt0133093");
+    expect(calls.filter((url) => url.includes("/3/movie/603?")).length).toBe(1);
+    expect(Value.Check(McpToolResponseSchemas.tmdb.get_recommendations, result)).toBe(true);
+  });
+
+  test("enriquece el primer resultado de búsqueda con IMDb para emitir su enlace", async () => {
+    const calls: string[] = [];
+    const service = new TmdbService({
+      fetchImpl: async (input) => {
+        const url = String(input);
+        calls.push(url);
+        if (url.includes("configuration")) {
+          return jsonResponse({ images: { secure_base_url: "https://image.tmdb.org/t/p/", poster_sizes: ["w500"] } });
+        }
+        if (url.includes("search/movie")) {
+          return jsonResponse({ results: [{ ...movie, id: 603, imdb_id: null }] });
+        }
+        if (url.endsWith("/3/movie/603?language=es-MX")) return jsonResponse(movie);
+        return jsonResponse({}, 404);
+      },
+    });
+
+    const result = await service.searchMovies("Matrix");
+
+    expect(result.results[0]?.imdb_id).toBe("tt0133093");
+    expect(calls.filter((url) => url.includes("/3/movie/603?")).length).toBe(1);
+    expect(Value.Check(McpToolResponseSchemas.tmdb.search_movies, result)).toBe(true);
+  });
+
+  test("limita el enriquecimiento de IMDb a los tres resultados presentables", async () => {
+    const detailLookups: string[] = [];
+    const recommendations = Array.from({ length: 5 }, (_, index) => ({
+      ...movie,
+      id: 600 + index,
+      imdb_id: null,
+    }));
+    const service = new TmdbService({
+      fetchImpl: async (input) => {
+        const url = String(input);
+        if (url.includes("configuration")) {
+          return jsonResponse({ images: { secure_base_url: "https://image.tmdb.org/t/p/", poster_sizes: ["w500"] } });
+        }
+        if (url.includes("recommendations")) return jsonResponse({ results: recommendations });
+        if (/\/3\/movie\/\d+\?/.test(url)) {
+          detailLookups.push(url);
+          return jsonResponse(movie);
+        }
+        return jsonResponse({}, 404);
+      },
+    });
+
+    const result = await service.getRecommendations("603");
+
+    expect(detailLookups).toHaveLength(3);
+    expect(result.results.slice(0, 3).every((item) => item.imdb_id === "tt0133093")).toBe(true);
+    expect(Value.Check(McpToolResponseSchemas.tmdb.get_recommendations, result)).toBe(true);
+  });
+
+  test("conserva recomendaciones si falla el lookup opcional de IMDb", async () => {
+    const service = new TmdbService({
+      fetchImpl: async (input) => {
+        const url = String(input);
+        if (url.includes("configuration")) {
+          return jsonResponse({ images: { secure_base_url: "https://image.tmdb.org/t/p/", poster_sizes: ["w500"] } });
+        }
+        if (url.includes("recommendations")) {
+          return jsonResponse({ results: [{ ...movie, id: 603, imdb_id: null }] });
+        }
+        return jsonResponse({}, 503);
+      },
+    });
+
+    await expect(service.getRecommendations("603")).resolves.toMatchObject({
+      results: [{ imdb_id: null, poster_url: "https://image.tmdb.org/t/p/w500/matrix.jpg" }],
+    });
+  });
+
   test("usa fallback seguro si falla la configuración de imágenes", async () => {
     const service = new TmdbService({
       fetchImpl: async (input) => String(input).includes("configuration")

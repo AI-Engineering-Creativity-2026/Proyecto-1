@@ -9,6 +9,7 @@ const DIRECT_INJECTION_PATTERNS = [
   /\b(?:lista|enumera|describe|muestra|dime|dame|revela|expone)\b.{0,60}\b(?:herramientas?|funciones?|capacidades|configuracion|variables de entorno)\b/i,
   /\b(?:act as|pretend to be|roleplay as)\b.{0,40}\b(?:developer|system|admin|unrestricted)\b/i,
   /\b(?:act[uú]a como|finge ser|simula ser)\b.{0,40}\b(?:desarrollador|sistema|administrador|sin restricciones)\b/i,
+  /\b(?:open_url|ui_action)\b/i,
 ];
 
 export const UNTRUSTED_CONTENT_POLICY = [

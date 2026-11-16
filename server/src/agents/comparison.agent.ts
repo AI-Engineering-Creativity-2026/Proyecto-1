@@ -61,6 +61,7 @@ export type ComparisonRuntime = (
 export interface ComparisonAgentExecution {
   content: string;
   book: BookDetailsResult | null;
+  verdict: ComparisonAssessment["verdict"] | null;
 }
 
 const NO_BOOK_MESSAGE =
@@ -115,7 +116,7 @@ export class ComparisonAgent {
     try {
       const matches = await this.tools.searchBooks({ title: movie.title.trim() });
       const candidate = matches.results[0];
-      if (!candidate) return { content: NO_BOOK_MESSAGE, book: null };
+      if (!candidate) return { content: NO_BOOK_MESSAGE, book: null, verdict: null };
 
       const book = await this.tools.getBookDetails({ volumeId: candidate.volumeId });
       const normalizedMovie = normalizeMovie(movie);
@@ -123,7 +124,7 @@ export class ComparisonAgent {
       if (!Value.Check(ComparisonAssessmentSchema, assessment)) {
         throw new Error("Invalid comparison assessment.");
       }
-      return { content: formatComparison(normalizedMovie, book, assessment), book };
+      return { content: formatComparison(normalizedMovie, book, assessment), book, verdict: assessment.verdict };
     } catch (error: unknown) {
       if (error instanceof ComparisonAgentError) throw error;
       if (error instanceof McpClientError) {

@@ -6,6 +6,7 @@ const POSTER_ORIGIN = "https://image.tmdb.org";
 const DEFAULT_POSTER_BASE = `${POSTER_ORIGIN}/t/p/w500`;
 const MAX_QUERY_LENGTH = 100;
 const MAX_OVERVIEW_LENGTH = 4_000;
+const MAX_IMDB_ENRICHMENT_LOOKUPS = 3;
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -19,6 +20,7 @@ export interface TmdbServiceOptions {
 }
 
 interface TmdbMovie {
+  id?: unknown;
   imdb_id?: unknown;
   poster_path?: unknown;
   overview?: unknown;
@@ -69,7 +71,9 @@ export class TmdbService {
       const params = new URLSearchParams({ query: safeQuery, language: this.language });
       if (safeYear !== undefined) params.set("year", String(safeYear));
       const payload = await this.requestJson<TmdbSearchResponse>("/3/search/movie", params);
-      const results = await Promise.all(asMovies(payload.results).map((movie) => this.toMovieDetails(movie)));
+      const movies = asMovies(payload.results);
+      await this.enrichMoviesWithImdbIds(movies);
+      const results = await Promise.all(movies.map((movie) => this.toMovieDetails(movie)));
       return { results };
     });
   }
@@ -92,9 +96,29 @@ export class TmdbService {
         `/3/movie/${safeMovieId}/recommendations`,
         new URLSearchParams({ language: this.language }),
       );
-      const results = await Promise.all(asMovies(payload.results).map((movie) => this.toMovieDetails(movie)));
+      const movies = asMovies(payload.results);
+      await this.enrichMoviesWithImdbIds(movies);
+      const results = await Promise.all(movies.map((movie) => this.toMovieDetails(movie)));
       return { results };
     });
+  }
+
+  private async enrichMoviesWithImdbIds(movies: TmdbMovie[]): Promise<void> {
+    let lookups = 0;
+    for (const candidate of movies) {
+      if (lookups >= MAX_IMDB_ENRICHMENT_LOOKUPS) return;
+      if (typeof candidate.imdb_id === "string" && candidate.imdb_id) continue;
+      if (!isTmdbMovieId(candidate.id)) continue;
+
+      lookups += 1;
+      try {
+        const details = await this.getMovieDetails(String(candidate.id));
+        candidate.imdb_id = details.imdb_id;
+      } catch {
+        // Keep movie results usable when optional IMDb enrichment is unavailable.
+        return;
+      }
+    }
   }
 
   private async toMovieDetails(movie: TmdbMovie): Promise<MovieDetails> {
@@ -161,6 +185,10 @@ function asMovies(value: unknown): TmdbMovie[] {
 
 function isMovie(value: unknown): value is TmdbMovie {
   return typeof value === "object" && value !== null;
+}
+
+function isTmdbMovieId(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
 function validateQuery(value: string): string {

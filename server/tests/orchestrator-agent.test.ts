@@ -90,6 +90,7 @@ describe("OrchestratorAgent", () => {
       return {
         content: "Veredicto: vale la pena verla. También puedo comparar otra película con su libro.",
         book: bookEvidence,
+        verdict: "worth_watching",
       };
     });
     const agent = new OrchestratorAgent(tools, async (_prompt, availableTools) =>
@@ -116,8 +117,26 @@ describe("OrchestratorAgent", () => {
     });
     expect(response[2]).toMatchObject({
       type: "agent_message",
-      content: "Veredicto: vale la pena verla. También puedo comparar otra película con su libro.",
+      content: "También puedo comparar otra película con su libro.\n\n**Veredicto: Vale la pena verla.**",
       providers: ["google_books"],
+    });
+  });
+
+  it("enforces the structured book verdict when the orchestrator omits it", async () => {
+    const tools = createOrchestratorTools(async () => ({ content: "unused" }), async () => ({
+      content: "La película y el libro comparten algunos temas.",
+      book: bookEvidence,
+      verdict: "not_worth_watching",
+    }));
+    const agent = new OrchestratorAgent(tools, async (_prompt, availableTools) =>
+      (await availableTools.compareMovieWithBook({ title: "The Matrix", overview: "", year: 1999 })).content,
+    fixedNow);
+
+    const response = await agent.respond({ ...message, content: "Compara The Matrix con su libro." }, context);
+
+    expect(response.at(-1)).toMatchObject({
+      type: "agent_message",
+      content: expect.stringContaining("**Veredicto: No vale la pena verla.**"),
     });
   });
 

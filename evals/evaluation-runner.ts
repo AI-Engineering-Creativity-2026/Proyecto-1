@@ -149,6 +149,10 @@ function collectEvidence(testCase: EvalCase, observation: EvalObservation): stri
   if (assertions.requireAgentMessage && agentMessages.length > 0) {
     evidence.push("Se recibió agent_message.");
   }
+  const errorCodes = [...new Set(observation.messages.flatMap((message) =>
+    message.type === "error" ? [message.error.code] : [],
+  ))];
+  for (const code of errorCodes) evidence.push(`El agente devolvió el error estable ${code}.`);
   if (assertions.requireRefusal && /solo puedo ayudar|no puedo (?:ayudar|proporcionar)/i.test(answer)) {
     evidence.push("Se verificó una negativa segura.");
   }
