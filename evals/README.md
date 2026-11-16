@@ -51,3 +51,7 @@ cero.
 
 El eval funcional Promptfoo (`bun run eval:functional`) sigue siendo una suite
 determinista separada que cubre más detalles del flujo funcional del issue #46.
+
+El [registro de revisión cruzada](./revision-cruzada.md) identifica la persona
+autora y la revisora de los conjuntos funcional, LLM01 y LLM07, y documenta las
+resoluciones de los casos ambiguos.
