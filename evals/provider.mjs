@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -8,7 +9,7 @@ export default class FunctionalAgentProvider {
 
   async callApi(prompt) {
     const { stdout } = await execFileAsync("bun", [
-      new URL("./run-functional-case.ts", import.meta.url).pathname,
+      fileURLToPath(new URL("./run-functional-case.ts", import.meta.url)),
       prompt,
     ], { maxBuffer: 1024 * 1024 });
     return { output: stdout };

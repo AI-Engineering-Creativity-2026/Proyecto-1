@@ -59,6 +59,9 @@ jobs:
       - name: Pruebas del servidor
         run: bun run test:server
 
+      - name: Evals versionados con modelo falso
+        run: bun run eval:run -- --mode fake
+
       - name: Evals funcionales del agente sin servicios externos
         run: bun run eval:functional
 

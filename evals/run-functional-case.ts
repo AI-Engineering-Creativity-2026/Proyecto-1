@@ -11,7 +11,7 @@ async function fixture<T extends keyof typeof McpToolResponseSchemas>(
   return Bun.file(new URL(`../server/tests/fixtures/mcp/${provider}/${name}.json`, import.meta.url)).json();
 }
 
-async function run(prompt: string) {
+export async function runFunctionalCase(prompt: string) {
   const calls: string[] = [];
   const tmdb = {
     async searchMovies(input: { query: string }) {
@@ -94,6 +94,8 @@ async function run(prompt: string) {
   return { messages, calls };
 }
 
-const prompt = process.argv[2];
-if (!prompt) throw new Error("Expected a prompt argument");
-process.stdout.write(JSON.stringify(await run(prompt)));
+if (import.meta.main) {
+  const prompt = process.argv[2];
+  if (!prompt) throw new Error("Expected a prompt argument");
+  process.stdout.write(JSON.stringify(await runFunctionalCase(prompt)));
+}

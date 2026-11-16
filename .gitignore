@@ -8,5 +8,6 @@ coverage
 *.tsbuildinfo
 .eslintcache
 .promptfoo/
+/evals/report.md
 .DS_Store
 **/*.bun

@@ -1,16 +1,45 @@
-# Evals funcionales del agente
+# Framework de evaluaciones AGIChat
 
-Ejecuta `bun run eval:functional` desde la raíz. Promptfoo lee
-`promptfooconfig.yaml` y evalúa el orquestador y los subagentes reales con un
-runtime de modelo determinista y fixtures locales de TMDB y Google Books.
-No hacen falta claves ni servicios externos. El comando falla si algún caso
-no supera sus aserciones; también se ejecuta en CI.
+`cases.json` es el formato versionado de casos (`schemaVersion: 1`). Cada caso
+contiene un identificador, una descripción, un prompt y aserciones sobre los
+eventos visibles: respuesta, negativa segura, atribución, acciones, pósteres y
+texto prohibido. El runner valida el formato antes de ejecutarlo.
 
-Los casos cubren recomendaciones, comparación con cuatro criterios y veredicto,
-anuncio de capacidad, póster seguro, `ui_action` y rechazo de solicitudes fuera
-de alcance. `provider.mjs` invoca `run-functional-case.ts`; las aserciones están
-en `assertions.cjs`. Para ampliar los evals, añade un caso versionado al YAML y
-una aserción que compruebe el contenido o los eventos observables.
+## Modo falso para CI
 
-Este conjunto cubre el alcance funcional del issue #46. La infraestructura y
-los escenarios de seguridad adicionales del issue #44 quedan independientes.
+Desde la raíz ejecuta:
+
+```bash
+bun run eval:run
+```
+
+El modo predeterminado es `fake`: usa el runtime determinista y fixtures locales
+de TMDB y Google Books. No llama a Groq ni a proveedores. CI invoca
+explícitamente `--mode fake`; el runner rechaza el modo real si detecta `CI=true`.
+
+El comando genera `evals/report.md`, ignorado por Git. El reporte resume cada
+caso, su estado, duración y las aserciones que fallaron. No incluye las
+respuestas completas del modelo.
+
+## Modo real manual
+
+Configura localmente el servidor con `AGENT_MODE=groq` y las variables de
+proveedores documentadas en `.env.example`. Luego inicia los MCP y el servidor
+con Docker Compose:
+
+```bash
+docker compose up -d tmdb-mcp books-mcp server
+bun run eval:run -- --mode real
+docker compose down
+```
+
+El runner se conecta a `ws://localhost:3000/ws`; se puede cambiar con
+`AGICHAT_EVAL_WS_URL`. Este modo envía los casos versionados al agente real y
+puede consumir solicitudes de Groq, TMDB y Google Books. Nunca se usa en CI.
+
+Usa `--cases` para seleccionar otro archivo versión 1 y `--output` para elegir
+la ruta del reporte. Si una aserción falla, el proceso termina con código no
+cero.
+
+El eval funcional Promptfoo (`bun run eval:functional`) sigue siendo una suite
+determinista separada que cubre más detalles del flujo funcional del issue #46.
