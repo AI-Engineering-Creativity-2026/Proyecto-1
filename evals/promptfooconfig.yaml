@@ -1,0 +1,52 @@
+description: Evals funcionales deterministas del agente AGIChat (issue #46)
+prompts:
+  - "{{prompt}}"
+providers:
+  - file://./provider.mjs
+tests:
+  - description: Recomienda películas con evidencia de TMDB
+    vars:
+      prompt: "Recomiéndame películas similares a The Matrix"
+    assert:
+      - type: javascript
+        value: file://./assertions.cjs:recommendation
+  - description: Compara película y libro con cuatro criterios y veredicto
+    vars:
+      prompt: "Compara la película The Matrix con su libro"
+    assert:
+      - type: javascript
+        value: file://./assertions.cjs:comparison
+  - description: Anuncia que también puede comparar una película con un libro
+    vars:
+      prompt: "Recomienda una película similar a The Matrix"
+    assert:
+      - type: javascript
+        value: file://./assertions.cjs:capability
+  - description: Incluye póster seguro en la respuesta
+    vars:
+      prompt: "Recomienda películas como The Matrix"
+    assert:
+      - type: javascript
+        value: file://./assertions.cjs:poster
+  - description: Emite ui_action para ficha de película en IMDb
+    vars:
+      prompt: "Recomienda películas como The Matrix"
+    assert:
+      - type: javascript
+        value: file://./assertions.cjs:uiAction
+        config:
+          source: imdb
+  - description: Emite ui_action para ficha de libro en Google Books
+    vars:
+      prompt: "Compara la película The Matrix con su libro"
+    assert:
+      - type: javascript
+        value: file://./assertions.cjs:uiAction
+        config:
+          source: google_books
+  - description: Rechaza solicitudes ajenas a películas y libros sin usar herramientas
+    vars:
+      prompt: "Necesito una receta de pasta"
+    assert:
+      - type: javascript
+        value: file://./assertions.cjs:refusal

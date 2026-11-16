@@ -39,6 +39,11 @@ jobs:
         with:
           bun-version: 1.3.3
 
+      - name: Configurar Node para Promptfoo
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Instalar dependencias reproduciblemente
         run: bun ci
 
@@ -53,6 +58,9 @@ jobs:
 
       - name: Pruebas del servidor
         run: bun run test:server
+
+      - name: Evals funcionales del agente sin servicios externos
+        run: bun run eval:functional
 
       - name: Build
         run: bun run build
