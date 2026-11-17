@@ -93,6 +93,40 @@ describe("DemoFallbackAgent", () => {
     }
   });
 
+  it("falls back when primary returns an AGENT_RATE_LIMIT error event", async () => {
+    const agent = new DemoFallbackAgent(
+      {
+        async respond() {
+          return [
+            {
+              type: "error",
+              conversationId: "demo-conv",
+              error: {
+                code: "AGENT_RATE_LIMIT",
+                message: "Rate limit",
+              },
+              timestamp: FIXED_NOW().toISOString(),
+            },
+          ];
+        },
+      },
+      () => makeClients(),
+      FIXED_NOW,
+    );
+
+    const events = await agent.respond(userMsg("Recomiéndame un thriller psicológico"), {
+      conversationId: "demo-conv",
+      history: [],
+    });
+
+    const msg = events.find((e) => e.type === "agent_message");
+    expect(msg).toBeDefined();
+    if (msg?.type === "agent_message") {
+      expect(msg.content).toContain("suspenso");
+      expect(msg.providers).toContain("tmdb");
+    }
+  });
+
   it("rethrows non-rate-limit errors without falling back", async () => {
     const agent = new DemoFallbackAgent(
       {

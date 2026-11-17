@@ -147,14 +147,21 @@ export class DemoFallbackAgent implements AgentPort {
     context: ConversationContext,
   ): Promise<IncomingMessage[]> {
     try {
-      return await this.primary.respond(message, context);
+      const events = await this.primary.respond(message, context);
+      const hitRateLimit = events.some(
+        (event) => event.type === "error" && event.error.code === "AGENT_RATE_LIMIT",
+      );
+      if (!hitRateLimit) {
+        return events;
+      }
     } catch (error) {
       if (!isRateLimitError(error)) {
         throw error;
       }
-      this.clientsPromise ??= this.getClients();
-      const clients = await this.clientsPromise;
-      return respondWithMcpFallback(message, clients, this.now);
     }
+
+    this.clientsPromise ??= this.getClients();
+    const clients = await this.clientsPromise;
+    return respondWithMcpFallback(message, clients, this.now);
   }
 }
