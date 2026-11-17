@@ -7,6 +7,7 @@ import {
   createConfiguredServerAgent,
   createOrchestratorSdkTools,
   createOrchestratorTools,
+  resolveAgentMode,
 } from "../src/agents/orchestrator.agent";
 import type { OrchestratorRuntime } from "../src/agents/orchestrator.agent";
 import type { OutgoingMessage } from "@agichat/contracts";
@@ -221,6 +222,9 @@ describe("OrchestratorAgent", () => {
   });
 
   it("keeps the mock as the default and selects a lazily connected orchestrator in Groq mode", () => {
+    expect(resolveAgentMode({})).toBe("mock");
+    expect(resolveAgentMode({ AGENT_MODE: "groq" })).toBe("groq");
+    expect(() => resolveAgentMode({ AGENT_MODE: "invalid" })).toThrow();
     expect(createConfiguredServerAgent({})).toBeInstanceOf(MockAgent);
     const agent = createConfiguredServerAgent({
       AGENT_MODE: "groq",

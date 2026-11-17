@@ -273,13 +273,20 @@ export function createConfiguredOrchestratorAgent(
   });
 }
 
+export function resolveAgentMode(
+  environment: AgentEnvironment = process.env,
+): "mock" | "groq" {
+  const mode = environment.AGENT_MODE?.trim() || "mock";
+  if (mode === "mock" || mode === "groq") return mode;
+  throw new Error('AGENT_MODE must be either "mock" or "groq".');
+}
+
 export function createConfiguredServerAgent(
   environment: AgentEnvironment = process.env,
 ): AgentPort {
-  const mode = environment.AGENT_MODE?.trim() || "mock";
+  const mode = resolveAgentMode(environment);
   if (mode === "mock") return new MockAgent();
-  if (mode === "groq") return createConfiguredOrchestratorAgent(environment);
-  throw new Error('AGENT_MODE must be either "mock" or "groq".');
+  return createConfiguredOrchestratorAgent(environment);
 }
 
 function isMovieRelated(prompt: string): boolean {

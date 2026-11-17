@@ -33,5 +33,6 @@ export {
   createOrchestratorAgent,
   createOrchestratorSdkTools,
   createOrchestratorTools,
+  resolveAgentMode,
 } from "./orchestrator.agent";
 export type { OrchestratorRuntime, OrchestratorTools } from "./orchestrator.agent";

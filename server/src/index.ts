@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { isIncomingMessage } from "@agichat/contracts";
 import {
   createConfiguredServerAgent,
+  resolveAgentMode,
   type AgentEnvironment,
   type AgentPort,
 } from "./agents";
@@ -82,6 +83,7 @@ export function createApp(options: AppOptions = {}) {
 
 if (import.meta.main) {
   const port = Number(process.env.PORT ?? 3000);
+  const agentMode = resolveAgentMode(process.env);
   const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
@@ -91,7 +93,8 @@ if (import.meta.main) {
     agentTimeoutMs: Number(process.env.AGENT_TIMEOUT_MS ?? 30_000),
   }).listen(port);
 
+  console.log(`Agente: ${agentMode}`);
   console.log(
-    `AGIChat mock API listening at ${app.server?.hostname}:${app.server?.port}`
+    `AGIChat API listening at ${app.server?.hostname}:${app.server?.port}`
   );
 }
