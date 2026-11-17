@@ -32,6 +32,31 @@ const GENRE_KEYWORDS: Array<{ match: RegExp; genre: string }> = [
   { match: /acci[oó]n/i, genre: "acción" },
 ];
 
+function extractYearRange(prompt: string): { year_from: number; year_to: number; label?: string } | null {
+  const decadeMatch = prompt.match(/(?:de\s+los\s+|años\s+|en\s+los\s+)?\b(60|70|80|90|2000|2010|2020)(?:'?s)?\b/i);
+  if (decadeMatch?.[1]) {
+    const raw = Number(decadeMatch[1]);
+    const start = raw < 100 ? 1900 + raw : raw;
+    return { year_from: start, year_to: start + 9, label: `de los ${start}` };
+  }
+
+  const exactYear = prompt.match(/\b(19[5-9]\d|20[0-2]\d)\b/);
+  if (exactYear?.[1]) {
+    const year = Number(exactYear[1]);
+    return { year_from: year, year_to: year, label: `de ${year}` };
+  }
+
+  return null;
+}
+
+function truncateAtWord(text: string, maxLength: number): string {
+  const clean = text.trim();
+  if (clean.length <= maxLength) return clean;
+  const sliced = clean.slice(0, maxLength);
+  const lastSpace = sliced.lastIndexOf(" ");
+  return `${(lastSpace > 40 ? sliced.slice(0, lastSpace) : sliced).trimEnd()}...`;
+}
+
 function extractAnchorMovieTitle(prompt: string): string | null {
   const patterns = [
     /si\s+(.+?)\s+es\s+mi\s+pel[ií]cula\s+favorita/i,
@@ -125,43 +150,62 @@ async function respondWithMcpFallback(
 
   const anchorTitle = extractAnchorMovieTitle(prompt);
   const genreMatch = GENRE_KEYWORDS.find((entry) => entry.match.test(prompt));
+  const yearRange = extractYearRange(prompt);
+  const discoverBase = {
+    sort_by: "rating" as const,
+    min_votes: yearRange ? 400 : 1500,
+    ...(yearRange ? { year_from: yearRange.year_from, year_to: yearRange.year_to } : {}),
+  };
 
   let moviesRes = genreMatch
-    ? await clients.tmdb.discoverMovies({ genres: [genreMatch.genre] })
+    ? await clients.tmdb.discoverMovies({ genres: [genreMatch.genre], ...discoverBase })
     : undefined;
   let sourceType: "discover_movies" | "get_recommendations" | "search_movies" = genreMatch
     ? "discover_movies"
     : "search_movies";
+  const periodSuffix = yearRange?.label ? ` ${yearRange.label}` : "";
   let heading = genreMatch
-    ? `Aquí tienes recomendaciones de ${genreMatch.genre}:`
-    : "Aquí tienes recomendaciones:";
+    ? `Aquí tienes recomendaciones de ${genreMatch.genre}${periodSuffix}:`
+    : `Aquí tienes recomendaciones${periodSuffix}:`;
 
   if (anchorTitle) {
     try {
       const anchorSearch = await clients.tmdb.searchMovies({ query: anchorTitle });
       const anchor = anchorSearch.results[0];
-      if (anchor?.imdb_id && /^\d{1,10}$/.test(anchor.imdb_id)) {
+      const anchorId = anchor?.imdb_id;
+      if (anchorId && (/^\d{1,10}$/.test(anchorId) || /^tt\d{5,12}$/i.test(anchorId))) {
         try {
-          const recs = await clients.tmdb.getRecommendations({ movieId: anchor.imdb_id });
+          const recs = await clients.tmdb.getRecommendations({ movieId: anchorId });
           const filtered = recs.results.filter(
             (item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()),
           );
           if (filtered.length > 0) {
             moviesRes = { results: filtered };
             sourceType = "get_recommendations";
-            heading = `Si te gustó **${anchor.title ?? anchorTitle}**, te recomiendo estas películas similares:`;
+            heading = `Si te gustó **${anchor?.title ?? anchorTitle}**, te recomiendo estas películas similares:`;
           }
         } catch {
-          // Continue to genre discovery when recommendations lookup fails.
+          // Continue to details/genre discovery when recommendations lookup fails.
         }
       }
+
+      let anchorGenres = anchor?.genres ?? [];
+      if (anchorGenres.length === 0 && anchorId && (/^\d{1,10}$/.test(anchorId) || /^tt\d{5,12}$/i.test(anchorId))) {
+        try {
+          const details = await clients.tmdb.getMovieDetails({ movieId: anchorId });
+          anchorGenres = details.genres;
+        } catch {
+          // Ignore details error and fall back to overview/keyword inference.
+        }
+      }
+
       const inferredGenre =
-        anchor?.genres[0] ??
+        anchorGenres[0] ??
         GENRE_KEYWORDS.find((entry) => entry.match.test(anchor?.overview ?? ""))?.genre ??
         (/otro mundo|m[aá]gic[oa]|fant[aá]stic[oa]|niñ[oa]/i.test(anchor?.overview ?? "") ? "fantasía" : undefined);
 
       if ((!moviesRes || moviesRes.results.length === 0) && inferredGenre) {
-        const byGenre = await clients.tmdb.discoverMovies({ genres: [inferredGenre] });
+        const byGenre = await clients.tmdb.discoverMovies({ genres: [inferredGenre], ...discoverBase });
         const filtered = byGenre.results.filter(
           (item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()),
         );
@@ -173,7 +217,7 @@ async function respondWithMcpFallback(
       }
 
       if (!moviesRes || moviesRes.results.length === 0) {
-        const popular = await clients.tmdb.discoverMovies({ sort_by: "rating" });
+        const popular = await clients.tmdb.discoverMovies(discoverBase);
         const filtered = popular.results.filter(
           (item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()),
         );
@@ -190,7 +234,7 @@ async function respondWithMcpFallback(
 
   if (!moviesRes || moviesRes.results.length === 0) {
     moviesRes = genreMatch
-      ? await clients.tmdb.discoverMovies({ genres: [genreMatch.genre] })
+      ? await clients.tmdb.discoverMovies({ genres: [genreMatch.genre], ...discoverBase })
       : await clients.tmdb.searchMovies({ query: anchorTitle ?? extractSearchQuery(prompt) });
   }
 
@@ -202,7 +246,7 @@ async function respondWithMcpFallback(
 
   const lines = topThree.map((item) => {
     const year = item.year ? ` (${item.year})` : "";
-    const overview = item.overview ? ` — ${item.overview.slice(0, 120)}` : "";
+    const overview = item.overview ? ` — ${truncateAtWord(item.overview, 140)}` : "";
     return `- **${item.title}${year}**${overview}`;
   });
 

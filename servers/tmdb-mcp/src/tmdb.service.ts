@@ -169,8 +169,28 @@ export class TmdbService {
     return new Map(entries);
   }
 
-  public async getMovieDetails(movieId: string): Promise<MovieDetails> {
+  private async resolveTmdbMovieId(movieId: string): Promise<string> {
     const safeMovieId = validateMovieId(movieId);
+    if (/^\d{1,10}$/.test(safeMovieId)) {
+      return safeMovieId;
+    }
+
+    return this.cache.getOrFetch("tmdb", `find-imdb:${safeMovieId}`, async () => {
+      const payload = await this.requestJson<{ movie_results?: unknown[] }>(
+        `/3/find/${safeMovieId}`,
+        new URLSearchParams({ external_source: "imdb_id", language: this.language }),
+      );
+      const movies = asMovies(payload.movie_results);
+      const firstId = movies[0]?.id;
+      if (!isTmdbMovieId(firstId)) {
+        throw new RangeError("No se encontró la película en TMDB para ese identificador.");
+      }
+      return String(firstId);
+    });
+  }
+
+  public async getMovieDetails(movieId: string): Promise<MovieDetails> {
+    const safeMovieId = await this.resolveTmdbMovieId(movieId);
     return this.cache.getOrFetch("tmdb", `details:${this.language}:${safeMovieId}`, async () => {
       const payload = await this.requestJson<TmdbMovie>(
         `/3/movie/${safeMovieId}`,
@@ -181,7 +201,7 @@ export class TmdbService {
   }
 
   public async getRecommendations(movieId: string): Promise<McpToolResponses["tmdb"]["get_recommendations"]> {
-    const safeMovieId = validateMovieId(movieId);
+    const safeMovieId = await this.resolveTmdbMovieId(movieId);
     return this.cache.getOrFetch("tmdb", `recommendations:${this.language}:${safeMovieId}`, async () => {
       const payload = await this.requestJson<TmdbSearchResponse>(
         `/3/movie/${safeMovieId}/recommendations`,
@@ -367,8 +387,10 @@ function validateQuery(value: string): string {
 }
 
 function validateMovieId(value: string): string {
-  if (!/^\d{1,10}$/.test(value)) throw new RangeError("El identificador de película no es válido.");
-  return value;
+  const normalized = typeof value === "string" ? value.trim() : "";
+  if (/^\d{1,10}$/.test(normalized)) return normalized;
+  if (/^tt\d{5,12}$/i.test(normalized)) return normalized.toLowerCase();
+  throw new RangeError("El identificador de película no es válido.");
 }
 
 function validateYear(value: number | undefined): number | undefined {

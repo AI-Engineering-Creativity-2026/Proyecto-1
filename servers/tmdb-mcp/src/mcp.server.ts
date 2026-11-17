@@ -31,7 +31,7 @@ export function createTmdbMcpHandler(service = new TmdbService()): (request: Req
       "get_movie_details",
       {
         description: "Obtiene detalles de una película de TMDB.",
-        inputSchema: { movieId: z.string().regex(/^\d{1,10}$/) },
+        inputSchema: { movieId: z.string().regex(/^(?:\d{1,10}|tt\d{5,12})$/i) },
       },
       async (args) => executeTool(() => service.getMovieDetails(String(args.movieId))),
     );
@@ -39,7 +39,7 @@ export function createTmdbMcpHandler(service = new TmdbService()): (request: Req
       "get_recommendations",
       {
         description: "Obtiene recomendaciones de TMDB.",
-        inputSchema: { movieId: z.string().regex(/^\d{1,10}$/) },
+        inputSchema: { movieId: z.string().regex(/^(?:\d{1,10}|tt\d{5,12})$/i) },
       },
       async (args) => executeTool(() => service.getRecommendations(String(args.movieId))),
     );
