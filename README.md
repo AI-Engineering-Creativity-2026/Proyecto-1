@@ -3,7 +3,7 @@
 [![CI](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/ci.yml)
 [![Release](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/release.yml/badge.svg)](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/release.yml)
 
-Sistema multiagente de recomendación de cine y comparación película-vs-libro (**Mook / Selma**), construido sobre la evolución del widget embebible **AGIChat**. Permite conversar en tiempo real mediante WebSocket, recomendar películas con póster vía **The Movie Database (TMDB)**, comparar adaptaciones con su libro original vía **Google Books**, abrir enlaces de referencia en **IMDb** y **Google Books** automáticamente tras validar una allowlist estricta, y proteger al agente contra ataques **OWASP LLM01** y **LLM07**, todo respaldado por servidores **MCP** independientes y un servidor backend *stateless*.
+Sistema multiagente de recomendación de cine y comparación película-vs-libro (**Mook / Selma**), construido sobre la evolución del widget embebible **AGIChat**. Permite conversar en tiempo real mediante WebSocket, recomendar películas con póster vía **The Movie Database (TMDB)**, comparar adaptaciones con su libro original vía **Google Books**, abrir enlaces de referencia en **IMDb** y **Google Books** automáticamente tras validar una allowlist estricta, y proteger al agente contra ataques **OWASP LLM01** y **LLM07**, todo respaldado por servidores **MCP** independientes y un servidor backend con contexto de conversación acotado en memoria.
 
 ![Landing principal de Mook — Selma](docs/diseno/capturas/demo-01-landing.png)
 
@@ -135,53 +135,17 @@ Más detalle en [`server/README.md`](server/README.md) y [`evals/README.md`](eva
 ## Arquitectura de alto nivel y escalabilidad
 
 ```mermaid
-flowchart TB
-    subgraph Client["Navegador del Cliente"]
-        Host["Aplicación Host / Landing Mook"]
-        Widget["Widget Vue 3 (&lt;agichat-widget&gt; / window.AGIChat)<br/>Markdown + DOMPurify + Allowlist + Pósters"]
-        Core["Core (@agichat/core)<br/>useChat() · ChatSession · Estado en Memoria"]
-    end
-
-    subgraph API["Backend Stateless (Elysia + Bun :3000)"]
-        WS["WebSocket /ws + GET /api/quota + GET /health"]
-        Val["Validación TypeBox (@agichat/contracts)"]
-        Port["AgentPort (Interfaz Única de Agente)"]
-        Orch["OrchestratorAgent / MockAgent / DemoFallbackAgent"]
-    end
-
-    subgraph LLM["Proveedor LLM"]
-        Groq["Groq API"]
-    end
-
-    subgraph MCP["Servidores MCP Independientes (Streamable HTTP)"]
-        TMDB["tmdb-mcp (:3101/mcp)<br/>Caché TTL + Cuota 900/día"]
-        Books["books-mcp (:3102/mcp)<br/>Caché TTL + Cuota 900/día"]
-    end
-
-    subgraph Upstream["APIs Externas (Free Tier)"]
-        TMDBAPI["The Movie Database API"]
-        BooksAPI["Google Books API"]
-    end
-
-    Host --> Widget
-    Widget <-->|"Props / Eventos"| Core
-    Core <-->|"WebSocket JSON (CONTRACTS.md)"| WS
-    WS <--> Val
-    Val <--> Port
-    Port --> Orch
-    Orch <-->|"Inferencia / Tool Calling"| Groq
-    Orch <-->|"MCP Streamable HTTP"| TMDB
-    Orch <-->|"MCP Streamable HTTP"| Books
-    TMDB <-->|"HTTPS"| TMDBAPI
-    Books <-->|"HTTPS"| BooksAPI
+flowchart LR
+    Widget["Widget embebible"] <-->|"Props y eventos"| Core["Core del chat"]
+    Core <-->|"WebSocket"| Server["Servidor y agente"]
 ```
 
 ### Por qué escala esta solución
 
-1. **Backend completamente *stateless*:** `server/` no almacena historial ni sesiones en disco; el estado conversacional reside en memoria del cliente (`packages/core/`) y viaja acotado por turno hacia `AgentPort`, lo que permite escalar réplicas horizontales detrás de un balanceador WebSocket.
-2. **Abstracción en servidores MCP independientes:** `tmdb-mcp` y `books-mcp` corren como servicios HTTP desacoplados usando el protocolo estándar MCP, permitiendo escalarlos por separado y reutilizar exactamente las mismas herramientas desde otros agentes futuros.
-3. **Caché TTL y control estricto de cuota (`@agichat/mcp-shared`):** ambos servidores MCP aplican caché en memoria (`MCP_CACHE_TTL_MS`, máx. `MCP_CACHE_MAX_ENTRIES=500`) y topes diarios (`TMDB_DAILY_REQUEST_LIMIT=900`, `GOOGLE_BOOKS_DAILY_REQUEST_LIMIT=900`) por debajo del límite gratuito de `1000` req/día, protegiendo las APIs ante picos de uso.
-4. **Límites y timeouts por capa:** `AGENT_TIMEOUT_MS`, `CLIENT_TIMEOUT_MS`, `TMDB_UPSTREAM_TIMEOUT_MS` y `GOOGLE_BOOKS_UPSTREAM_TIMEOUT_MS` evitan acumulación de conexiones colgadas, y `DemoFallbackAgent` degrada de forma segura ante límites de tasa (`429`).
+1. **Separación de responsabilidades:** el Widget presenta la conversación, el Core administra el estado del chat y el servidor coordina el agente. Cada componente puede evolucionar sin trasladar la lógica de las otras capas.
+2. **Servicios MCP independientes:** TMDB y Google Books se consumen desde servidores MCP separados del servidor de chat. Pueden desplegarse y escalarse por separado, y sus herramientas pueden reutilizarse desde otros agentes.
+3. **Estado actual y escalado del servidor:** el servidor conserva contexto de conversación en memoria con límites de tamaño, cantidad y expiración. Para ejecutar varias réplicas sin perder ese contexto al reconectar, se necesitaría afinidad por conversación o almacenamiento compartido; el estado actual no es completamente *stateless*.
+4. **Caché, cuotas y resiliencia:** los MCP usan caché TTL y contadores diarios en memoria por instancia. En un despliegue con varias réplicas, esos contadores tendrían que compartirse para mantener un límite global por proveedor. Los timeouts por capa y el respaldo ante `429` ayudan a evitar esperas indefinidas y a degradar el servicio de forma controlada.
 
 Más detalle: [`docs/architecture.md`](docs/architecture.md) · [`docs/decisiones-fase-2.md`](docs/decisiones-fase-2.md)
 
