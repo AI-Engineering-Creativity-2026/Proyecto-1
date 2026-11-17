@@ -48,9 +48,17 @@ function extractAnchorMovieTitle(prompt: string): string | null {
   return null;
 }
 
-function isRateLimitError(error: unknown): boolean {
+function isFallbackEligibleError(error: unknown): boolean {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code)
+    : "";
   const message = error instanceof Error ? error.message : String(error);
-  return /429|rate[_ -]?limit|too many requests|RATE_LIMITED|AGENT_RATE_LIMIT/i.test(message);
+  return (
+    code === "RATE_LIMITED" ||
+    code === "AGENT_RATE_LIMIT" ||
+    code === "UPSTREAM_ERROR" ||
+    /429|rate[_ -]?limit|too many requests|tool_use_failed|RATE_LIMITED|AGENT_RATE_LIMIT|UPSTREAM_ERROR|no está disponible/i.test(message)
+  );
 }
 
 function extractSearchQuery(prompt: string): string {
@@ -211,13 +219,18 @@ export class DemoFallbackAgent implements AgentPort {
         return events;
       }
     } catch (error) {
-      if (!isRateLimitError(error)) {
+      if (!isFallbackEligibleError(error)) {
         throw error;
       }
     }
 
-    this.clientsPromise ??= this.getClients();
-    const clients = await this.clientsPromise;
-    return respondWithMcpFallback(message, clients, this.now);
+    try {
+      this.clientsPromise ??= this.getClients();
+      const clients = await this.clientsPromise;
+      return await respondWithMcpFallback(message, clients, this.now);
+    } catch (fallbackError) {
+      this.clientsPromise = undefined;
+      throw fallbackError;
+    }
   }
 }
