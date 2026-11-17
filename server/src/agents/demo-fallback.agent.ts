@@ -140,21 +140,48 @@ async function respondWithMcpFallback(
     try {
       const anchorSearch = await clients.tmdb.searchMovies({ query: anchorTitle });
       const anchor = anchorSearch.results[0];
-      if (anchor?.imdb_id) {
-        const recs = await clients.tmdb.getRecommendations({ movieId: anchor.imdb_id });
-        const filtered = recs.results.filter(
+      if (anchor?.imdb_id && /^\d{1,10}$/.test(anchor.imdb_id)) {
+        try {
+          const recs = await clients.tmdb.getRecommendations({ movieId: anchor.imdb_id });
+          const filtered = recs.results.filter(
+            (item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()),
+          );
+          if (filtered.length > 0) {
+            moviesRes = { results: filtered };
+            sourceType = "get_recommendations";
+            heading = `Si te gustó **${anchor.title ?? anchorTitle}**, te recomiendo estas películas similares:`;
+          }
+        } catch {
+          // Continue to genre discovery when recommendations lookup fails.
+        }
+      }
+      const inferredGenre =
+        anchor?.genres[0] ??
+        GENRE_KEYWORDS.find((entry) => entry.match.test(anchor?.overview ?? ""))?.genre ??
+        (/otro mundo|m[aá]gic[oa]|fant[aá]stic[oa]|niñ[oa]/i.test(anchor?.overview ?? "") ? "fantasía" : undefined);
+
+      if ((!moviesRes || moviesRes.results.length === 0) && inferredGenre) {
+        const byGenre = await clients.tmdb.discoverMovies({ genres: [inferredGenre] });
+        const filtered = byGenre.results.filter(
           (item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()),
         );
         if (filtered.length > 0) {
           moviesRes = { results: filtered };
-          sourceType = "get_recommendations";
-          heading = `Si te gustó **${anchor.title ?? anchorTitle}**, te recomiendo estas películas similares:`;
+          sourceType = "discover_movies";
+          heading = `Si te gustó **${anchor?.title ?? anchorTitle}**, aquí tienes películas de ${inferredGenre.toLowerCase()}:`;
         }
       }
-      if ((!moviesRes || moviesRes.results.length === 0) && anchor?.genres[0]) {
-        moviesRes = await clients.tmdb.discoverMovies({ genres: [anchor.genres[0]] });
-        sourceType = "discover_movies";
-        heading = `Si te gustó **${anchor.title ?? anchorTitle}**, aquí tienes películas de ${anchor.genres[0]}:`;
+
+      if (!moviesRes || moviesRes.results.length === 0) {
+        const popular = await clients.tmdb.discoverMovies({ sort_by: "rating" });
+        const filtered = popular.results.filter(
+          (item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()),
+        );
+        if (filtered.length > 0) {
+          moviesRes = { results: filtered };
+          sourceType = "discover_movies";
+          heading = `Si te gustó **${anchor?.title ?? anchorTitle}**, te recomiendo estas opciones mejor valoradas:`;
+        }
       }
     } catch {
       // Fall back to genre discovery or search below when anchor lookup fails.
@@ -164,10 +191,13 @@ async function respondWithMcpFallback(
   if (!moviesRes || moviesRes.results.length === 0) {
     moviesRes = genreMatch
       ? await clients.tmdb.discoverMovies({ genres: [genreMatch.genre] })
-      : await clients.tmdb.searchMovies({ query: extractSearchQuery(prompt) });
+      : await clients.tmdb.searchMovies({ query: anchorTitle ?? extractSearchQuery(prompt) });
   }
 
-  const topThree = moviesRes.results.slice(0, 3);
+  const filteredResults = anchorTitle
+    ? moviesRes.results.filter((item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()))
+    : moviesRes.results;
+  const topThree = (filteredResults.length > 0 ? filteredResults : moviesRes.results).slice(0, 3);
   const featured = topThree[0];
 
   const lines = topThree.map((item) => {
