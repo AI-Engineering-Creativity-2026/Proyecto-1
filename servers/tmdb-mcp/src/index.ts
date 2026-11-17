@@ -7,9 +7,10 @@ export interface TmdbAppOptions {
 }
 
 export function createTmdbApp(options: TmdbAppOptions = {}) {
-  const handler = createTmdbMcpHandler(options.service);
+  const service = options.service ?? new TmdbService();
+  const handler = createTmdbMcpHandler(service);
   return new Elysia()
-    .get("/health", () => ({ service: "tmdb-mcp", status: "ok" }))
+    .get("/health", () => ({ service: "tmdb-mcp", status: "ok", quota: service.getQuotaStatus() }))
     .post("/mcp", ({ request }) => handler(request));
 }
 

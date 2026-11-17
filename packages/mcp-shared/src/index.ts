@@ -173,6 +173,13 @@ export class McpRequestCache {
     return this.budget.getUsage(provider, this.dayKey());
   }
 
+  public getQuotaStatus(provider: Provider): { used: number; limit: number; usedPct: number } {
+    const used = this.getBudgetUsage(provider);
+    const limit = this.dailyLimits[provider];
+    const usedPct = limit > 0 ? Number(((used / limit) * 100).toFixed(2)) : 0;
+    return { used, limit, usedPct };
+  }
+
   private async fetchAndCache<T>(
     provider: Provider,
     key: string,

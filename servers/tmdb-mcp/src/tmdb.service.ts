@@ -59,6 +59,10 @@ export class TmdbService {
   private readonly fetchImpl: FetchLike;
   private readonly cache: McpRequestCache;
 
+  public getQuotaStatus() {
+    return this.cache.getQuotaStatus("tmdb");
+  }
+
   public constructor(options: TmdbServiceOptions = {}) {
     const config = readMcpCacheConfig({
       MCP_CACHE_TTL_MS: process.env.MCP_CACHE_TTL_MS,

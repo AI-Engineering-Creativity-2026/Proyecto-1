@@ -42,6 +42,10 @@ export class BooksService {
     this.cache = options.cache ?? new McpRequestCache(config);
   }
 
+  public getQuotaStatus() {
+    return this.cache.getQuotaStatus("google_books");
+  }
+
   public async searchBooks(title: string, author?: string): Promise<McpToolResponses["books"]["search_books"]> {
     const safeTitle = validateText(title, MAX_TITLE_LENGTH, "El título");
     const safeAuthor = author === undefined ? undefined : validateText(author, MAX_AUTHOR_LENGTH, "El autor");

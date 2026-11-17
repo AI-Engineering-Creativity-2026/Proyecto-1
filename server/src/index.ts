@@ -21,6 +21,67 @@ interface AppOptions {
   environment?: AgentEnvironment;
 }
 
+interface ProviderQuota {
+  used: number;
+  limit: number;
+  usedPct: number;
+  tpmLimit?: number;
+  tpmUsedPct?: number;
+}
+
+function mcpHealthUrl(mcpUrl: string | undefined, fallback: string): string {
+  const base = mcpUrl?.trim() || fallback;
+  return base.replace(/\/mcp\/?$/, "/health");
+}
+
+async function fetchMcpQuota(url: string): Promise<ProviderQuota | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(2_500) });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { quota?: ProviderQuota };
+    return data.quota ?? null;
+  } catch {
+    return null;
+  }
+}
+
+let cachedGroqQuota: { value: ProviderQuota | null; expiresAt: number } | undefined;
+
+async function fetchGroqQuota(env: AgentEnvironment): Promise<ProviderQuota | null> {
+  const apiKey = env.GROQ_API_KEY?.trim();
+  if (!apiKey || resolveAgentMode(env) !== "groq") return null;
+  if (cachedGroqQuota && cachedGroqQuota.expiresAt > Date.now()) {
+    return cachedGroqQuota.value;
+  }
+  try {
+    const baseUrl = (env.GROQ_BASE_URL?.trim() || "https://api.groq.com/openai/v1").replace(/\/$/, "");
+    const model = env.GROQ_MODEL?.trim() || "openai/gpt-oss-20b";
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: "ok" }], max_tokens: 1 }),
+      signal: AbortSignal.timeout(4_000),
+    });
+    const reqLim = Number(res.headers.get("x-ratelimit-limit-requests") || 0);
+    const reqRem = Number(res.headers.get("x-ratelimit-remaining-requests") || 0);
+    const tokLim = Number(res.headers.get("x-ratelimit-limit-tokens") || 0);
+    const tokRem = Number(res.headers.get("x-ratelimit-remaining-tokens") || 0);
+    const used = Math.max(0, reqLim - reqRem);
+    const usedPct = reqLim > 0 ? Number(((used / reqLim) * 100).toFixed(2)) : 0;
+    const tpmUsedPct = tokLim > 0 ? Number((((tokLim - tokRem) / tokLim) * 100).toFixed(2)) : 0;
+    const value: ProviderQuota | null = reqLim > 0
+      ? { used, limit: reqLim, usedPct, tpmLimit: tokLim, tpmUsedPct }
+      : null;
+    cachedGroqQuota = { value, expiresAt: Date.now() + 60_000 };
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 function invalidMessageError(conversationId: string) {
   return {
     type: "error" as const,
@@ -67,6 +128,21 @@ export function createApp(options: AppOptions = {}) {
       service: "agichat-mock-api",
       status: "ok",
     }))
+    .get("/api/quota", async ({ request, set }) => {
+      const origin = request.headers.get("origin");
+      const allowed = options.allowedOrigins ?? [];
+      if (origin && (allowed.length === 0 || allowed.includes(origin))) {
+        set.headers["access-control-allow-origin"] = origin;
+      } else {
+        set.headers["access-control-allow-origin"] = "*";
+      }
+      const [groq, tmdb, google_books] = await Promise.all([
+        fetchGroqQuota(environment),
+        fetchMcpQuota(mcpHealthUrl(process.env.TMDB_MCP_URL, "http://localhost:3101/mcp")),
+        fetchMcpQuota(mcpHealthUrl(process.env.BOOKS_MCP_URL, "http://localhost:3102/mcp")),
+      ]);
+      return { groq, tmdb, google_books };
+    })
     .ws("/ws", {
       beforeHandle({ request, set }) {
         const allowedOrigins = options.allowedOrigins ?? [];

@@ -30,7 +30,7 @@ const GENRE_KEYWORDS: Array<{ match: RegExp; genre: string }> = [
 
 function isRateLimitError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /429|rate[_ -]?limit|too many requests|AGENT_RATE_LIMIT/i.test(message);
+  return /429|rate[_ -]?limit|too many requests|RATE_LIMITED|AGENT_RATE_LIMIT/i.test(message);
 }
 
 function extractSearchQuery(prompt: string): string {
@@ -149,7 +149,9 @@ export class DemoFallbackAgent implements AgentPort {
     try {
       const events = await this.primary.respond(message, context);
       const hitRateLimit = events.some(
-        (event) => event.type === "error" && event.error.code === "AGENT_RATE_LIMIT",
+        (event) =>
+          event.type === "error" &&
+          (event.error.code === "RATE_LIMITED" || event.error.code === "AGENT_RATE_LIMIT"),
       );
       if (!hitRateLimit) {
         return events;

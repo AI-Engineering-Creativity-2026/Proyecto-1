@@ -93,7 +93,7 @@ describe("DemoFallbackAgent", () => {
     }
   });
 
-  it("falls back when primary returns an AGENT_RATE_LIMIT error event", async () => {
+  it("falls back when primary returns a RATE_LIMITED or AGENT_RATE_LIMIT error event", async () => {
     const agent = new DemoFallbackAgent(
       {
         async respond() {
@@ -102,8 +102,8 @@ describe("DemoFallbackAgent", () => {
               type: "error",
               conversationId: "demo-conv",
               error: {
-                code: "AGENT_RATE_LIMIT",
-                message: "Rate limit",
+                code: "RATE_LIMITED",
+                message: "Un servicio alcanzó su límite de solicitudes. Intenta más tarde.",
               },
               timestamp: FIXED_NOW().toISOString(),
             },

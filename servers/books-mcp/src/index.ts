@@ -5,9 +5,10 @@ import { BooksService } from "./books.service";
 export interface BooksAppOptions { service?: BooksService }
 
 export function createBooksApp(options: BooksAppOptions = {}) {
-  const handler = createBooksMcpHandler(options.service);
+  const service = options.service ?? new BooksService();
+  const handler = createBooksMcpHandler(service);
   return new Elysia()
-    .get("/health", () => ({ service: "books-mcp", status: "ok" }))
+    .get("/health", () => ({ service: "books-mcp", status: "ok", quota: service.getQuotaStatus() }))
     .post("/mcp", ({ request }) => handler(request));
 }
 
