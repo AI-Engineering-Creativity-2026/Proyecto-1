@@ -6,56 +6,20 @@ Este documento detalla la arquitectura de software del SDK de widget de chat de 
 
 ## 1. Diagrama de Alto Nivel (Mermaid.js)
 
-El sistema evoluciona de una arquitectura de 3 capas desacopladas a una **topología distribuida orientada a servicios** donde el servidor WebSocket es completamente *stateless* y las capacidades de datos externos se aíslan en servidores **MCP (Model Context Protocol)** independientes.
+El sistema se organiza en tres componentes principales: Widget, Core del chat y servidor/agente. Los servicios MCP y los proveedores externos forman parte de la implementación interna del servidor y se detallan en las secciones de escalabilidad y arquitectura de agentes.
 
 ```mermaid
-flowchart TB
-    subgraph Client["Navegador del Cliente"]
-        Host["Aplicación Host / Landing Mook"]
-        Widget["Widget Vue 3 (&lt;agichat-widget&gt; / window.AGIChat)<br/>Markdown + DOMPurify + Allowlist + Pósters"]
-        Core["Core (@agichat/core)<br/>useChat() · ChatSession · Estado en Memoria"]
-    end
-
-    subgraph API["Backend Stateless (Elysia + Bun :3000)"]
-        WS["WebSocket /ws + GET /api/quota + GET /health"]
-        Val["Validación TypeBox (@agichat/contracts)"]
-        Port["AgentPort (Interfaz Única de Agente)"]
-        Orch["Sistema Multiagente / Mock / Respaldo Demo"]
-    end
-
-    subgraph LLM["Proveedor LLM"]
-        Groq["Groq API (openai/gpt-oss-20b)"]
-    end
-
-    subgraph MCP["Servidores MCP Independientes (Streamable HTTP)"]
-        TMDB["tmdb-mcp (:3101/mcp)<br/>Caché TTL + Cuota Diaria (900 req/día)"]
-        Books["books-mcp (:3102/mcp)<br/>Caché TTL + Cuota Diaria (900 req/día)"]
-    end
-
-    subgraph Upstream["APIs Externas (Free Tier)"]
-        TMDBAPI["The Movie Database API"]
-        BooksAPI["Google Books API"]
-    end
-
-    Host --> Widget
-    Widget <-->|"Props / Eventos"| Core
-    Core <-->|"WebSocket JSON (CONTRACTS.md)"| WS
-    WS <--> Val
-    Val <--> Port
-    Port --> Orch
-    Orch <-->|"Inferencia / Tool Calling"| Groq
-    Orch <-->|"MCP Streamable HTTP"| TMDB
-    Orch <-->|"MCP Streamable HTTP"| Books
-    TMDB <-->|"HTTPS"| TMDBAPI
-    Books <-->|"HTTPS"| BooksAPI
+flowchart LR
+    Widget["Widget embebible"] <-->|"Props y eventos"| Core["Core del chat"]
+    Core <-->|"WebSocket"| Server["Servidor y agente"]
 ```
 
 ### 1.1 Justificación de Escalabilidad
 
-1. **Servidor backend sin estado (*stateless*)**: `server/` no persiste sesiones en disco ni mantiene estado compartido entre peticiones; el historial vive en memoria del cliente (`packages/core/`) y la ventana reciente viaja en cada turno (`AgentPort`), permitiendo escalar horizontalmente múltiples réplicas detrás de un balanceador de carga con afinidad WebSocket.
-2. **Servidores MCP desacoplados (`tmdb-mcp` y `books-mcp`)**: Exponen herramientas reutilizables vía Streamable HTTP (`3101` y `3102`), por lo que pueden escalarse de forma independiente al servidor de chat y ser consumidos por otros agentes futuros sin duplicar clientes ni credenciales.
-3. **Caché TTL y presupuesto diario en `@agichat/mcp-shared`**: Ambas instancias MCP comparten una caché en memoria con TTL configurable (`MCP_CACHE_TTL_MS`, máx. `MCP_CACHE_MAX_ENTRIES = 500`) y contadores diarios (`TMDB_DAILY_REQUEST_LIMIT = 900`, `GOOGLE_BOOKS_DAILY_REQUEST_LIMIT = 900`) por debajo del cap gratuito de `1000` solicitudes/día, evitando agotar cuotas externas bajo picos de tráfico.
-4. **Timeouts y degradación controlada**: Se aplican timeouts por capa (`AGENT_TIMEOUT_MS`, `CLIENT_TIMEOUT_MS`, `TMDB_UPSTREAM_TIMEOUT_MS`, `GOOGLE_BOOKS_UPSTREAM_TIMEOUT_MS`) y respaldo determinista en modo presentación (`DemoFallbackAgent`) ante límites de tasa (`429`).
+1. **Separación de responsabilidades**: el Widget presenta la conversación, el Core administra el estado del chat y el servidor coordina el agente. Cada componente puede evolucionar sin trasladar la lógica de las otras capas.
+2. **MCP desacoplados**: `tmdb-mcp` y `books-mcp` exponen herramientas por Streamable HTTP y pueden desplegarse por separado del servidor de chat o reutilizarse desde otros agentes.
+3. **Estado actual del servidor**: el handler y `ConversationStore` conservan contexto de conversación en memoria con límites de cantidad, tamaño y expiración. El servidor no es completamente *stateless*. Para escalar a varias réplicas sin perder contexto al reconectar, se necesitaría afinidad por conversación o almacenamiento compartido.
+4. **Caché, cuota y resiliencia**: la caché TTL y los contadores diarios de `@agichat/mcp-shared` viven en memoria por instancia. Al usar varias réplicas MCP, el presupuesto tendría que compartirse para aplicar un límite global. Los timeouts por capa y el respaldo ante `429` ayudan a controlar fallos de proveedores y respuestas lentas.
 
 ---
 
@@ -140,8 +104,8 @@ sequenceDiagram
 La arquitectura de AGIChat fue diseñada con los siguientes principios y justificaciones técnicas:
 
 ### 2.1 Desacoplamiento Estricto en 3 Capas
-1. **Mock API (`server/`)**: Construido con **Elysia.js y TypeBox**. Se enfoca exclusivamente en recibir y emitir eventos mediante el protocolo WebSocket definido en `CONTRACTS.md`. Es un servidor sin estado (*stateless*).
-   - *Justificación*: Al aislar el servidor como una entidad independiente del cliente, garantizamos que en la **Fase 2** el mock pueda ser reemplazado al 100% por un agente de IA generativa real (LLM, LangChain, Agente autónomo) sin requerir modificaciones ni en el Core ni en los componentes de la interfaz de usuario.
+1. **Servidor y agente (`server/`)**: Construido con Elysia y TypeBox. Recibe y emite eventos mediante el protocolo WebSocket definido en `CONTRACTS.md`, y coordina el agente configurado. Conserva contexto conversacional acotado en memoria del proceso; por eso no es completamente *stateless*.
+   - *Justificación*: Mantener el servidor separado del Core y el Widget permite cambiar entre el agente mock y el agente real sin trasladar lógica de proveedor o de conversación a la interfaz. El estado en memoria es sencillo para una instancia; un despliegue con varias réplicas necesita afinidad de conversación o almacenamiento compartido para conservar el contexto al reconectar.
 2. **Core (`packages/core/`)**: Paquete TypeScript puro que exporta el composable `useChat` y el motor `ChatSession`.
    - *Justificación*: Centraliza la máquina de estados del chat, la conexión WebSocket, el manejo de reconexiones con retroceso exponencial (*exponential backoff*), la cola de mensajes mientras conecta y la lógica de reintentos (`retryLastMessage()`). Al ser agnóstico del DOM y de la renderización HTML, puede ser reutilizado en cualquier aplicación web, CLI o móvil en el futuro.
 3. **Widget (`widget/`)**: Implementado en Vue 3 y empaquetado como **Web Component** estándar (`defineCustomElement`) junto con la API global `window.AGIChat`.
