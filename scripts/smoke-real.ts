@@ -1,4 +1,4 @@
-import { isIncomingMessage, type IncomingMessage } from "@agichat/contracts";
+import { isIncomingMessage, type IncomingMessage } from "../packages/contracts/src/index";
 
 export const MAX_REAL_TURNS = 12;
 
