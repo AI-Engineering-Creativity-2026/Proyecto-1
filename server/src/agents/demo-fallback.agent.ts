@@ -21,12 +21,32 @@ const KNOWN_SOURCE_BOOKS: Array<{
 const GENRE_KEYWORDS: Array<{ match: RegExp; genre: string }> = [
   { match: /ciencia ficci[oó]n|sci-fi/i, genre: "ciencia ficción" },
   { match: /thriller|suspenso|misterio|psicol[oó]gico/i, genre: "suspenso" },
+  { match: /stop[- ]?motion|animaci[oó]n|animad[ao]/i, genre: "animación" },
   { match: /fantas[ií]a/i, genre: "fantasía" },
   { match: /terror|horror/i, genre: "terror" },
+  { match: /romance|rom[aá]ntic[ao]/i, genre: "romance" },
+  { match: /familia|infantil/i, genre: "familia" },
+  { match: /documental/i, genre: "documental" },
   { match: /drama/i, genre: "drama" },
   { match: /comedia/i, genre: "comedia" },
   { match: /acci[oó]n/i, genre: "acción" },
 ];
+
+function extractAnchorMovieTitle(prompt: string): string | null {
+  const patterns = [
+    /si\s+(.+?)\s+es\s+mi\s+pel[ií]cula\s+favorita/i,
+    /aparte\s+de\s+(.+?)\s+(?:me\s+)?recomiend/i,
+    /(?:similares?\s+a|parecid[ao]s?\s+a|como)\s+([a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s:'-]{2,50})/i,
+  ];
+  for (const pattern of patterns) {
+    const match = prompt.match(pattern);
+    if (match?.[1]) {
+      const cleaned = match[1].replace(/[¿?¡!"]/g, "").trim();
+      if (cleaned.length >= 2) return cleaned;
+    }
+  }
+  return null;
+}
 
 function isRateLimitError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -95,10 +115,42 @@ async function respondWithMcpFallback(
     );
   }
 
+  const anchorTitle = extractAnchorMovieTitle(prompt);
   const genreMatch = GENRE_KEYWORDS.find((entry) => entry.match.test(prompt));
-  const moviesRes = genreMatch
-    ? await clients.tmdb.discoverMovies({ genre: genreMatch.genre })
-    : await clients.tmdb.searchMovies({ query: extractSearchQuery(prompt) });
+
+  let moviesRes = genreMatch
+    ? await clients.tmdb.discoverMovies({ genres: [genreMatch.genre] })
+    : undefined;
+  let sourceType: "discover_movies" | "get_recommendations" | "search_movies" = genreMatch
+    ? "discover_movies"
+    : "search_movies";
+  let heading = genreMatch
+    ? `Aquí tienes recomendaciones de ${genreMatch.genre}:`
+    : "Aquí tienes recomendaciones:";
+
+  if (anchorTitle) {
+    const anchorSearch = await clients.tmdb.searchMovies({ query: anchorTitle });
+    const anchor = anchorSearch.results[0];
+    if (anchor) {
+      const recs = await clients.tmdb.getRecommendations({ movieId: String(anchor.id) });
+      if (recs.results.length > 0) {
+        moviesRes = recs;
+        sourceType = "get_recommendations";
+        heading = `Si te gustó **${anchor.title}**, te recomiendo estas películas similares:`;
+      } else if (!moviesRes && anchor.genres[0]) {
+        moviesRes = await clients.tmdb.discoverMovies({ genres: [anchor.genres[0]] });
+        sourceType = "discover_movies";
+        heading = `Si te gustó **${anchor.title}**, aquí tienes películas de ${anchor.genres[0]}:`;
+      }
+    }
+  }
+
+  if (!moviesRes || moviesRes.results.length === 0) {
+    moviesRes = genreMatch
+      ? await clients.tmdb.discoverMovies({ genres: [genreMatch.genre] })
+      : await clients.tmdb.searchMovies({ query: extractSearchQuery(prompt) });
+  }
+
   const topThree = moviesRes.results.slice(0, 3);
   const featured = topThree[0];
 
@@ -110,7 +162,7 @@ async function respondWithMcpFallback(
 
   const content = topThree.length > 0
     ? [
-        `Aquí tienes recomendaciones${genreMatch ? ` de ${genreMatch.genre}` : ""}:`,
+        heading,
         "",
         ...lines,
         "",
@@ -122,7 +174,7 @@ async function respondWithMcpFallback(
     message.conversationId,
     content,
     {
-      movies: featured ? [{ source: genreMatch ? "discover_movies" : "search_movies", movie: featured }] : [],
+      movies: featured ? [{ source: sourceType, movie: featured }] : [],
       book: null,
     },
     now,

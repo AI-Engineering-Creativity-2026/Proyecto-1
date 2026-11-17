@@ -25,7 +25,7 @@ async function makeClients() {
   return createMcpClients({
     tmdb: {
       async callTool(name) {
-        if (name === "discover_movies" || name === "search_movies") {
+        if (name === "discover_movies" || name === "search_movies" || name === "get_recommendations") {
           return { structuredContent: tmdbSearch };
         }
         throw new Error(`Unexpected TMDB tool ${name}`);
@@ -124,6 +124,38 @@ describe("DemoFallbackAgent", () => {
     if (msg?.type === "agent_message") {
       expect(msg.content).toContain("suspenso");
       expect(msg.providers).toContain("tmdb");
+    }
+  });
+
+  it("handles favorite-movie similarity and stop-motion genre prompts", async () => {
+    const agent = new DemoFallbackAgent(
+      {
+        async respond() {
+          throw new Error("RATE_LIMITED");
+        },
+      },
+      () => makeClients(),
+      FIXED_NOW,
+    );
+
+    const favEvents = await agent.respond(userMsg("Si Coraline es mi pelicula favorita, cual otra me recomiendas?"), {
+      conversationId: "demo-conv",
+      history: [],
+    });
+    const favMsg = favEvents.find((e) => e.type === "agent_message");
+    expect(favMsg).toBeDefined();
+    if (favMsg?.type === "agent_message") {
+      expect(favMsg.content).toContain("Si te gustó");
+    }
+
+    const stopMotionEvents = await agent.respond(
+      userMsg("Que otras peliculas aparte de Wildwood me recomiendas de stop motion"),
+      { conversationId: "demo-conv", history: [] },
+    );
+    const smMsg = stopMotionEvents.find((e) => e.type === "agent_message");
+    expect(smMsg).toBeDefined();
+    if (smMsg?.type === "agent_message") {
+      expect(smMsg.providers).toContain("tmdb");
     }
   });
 
