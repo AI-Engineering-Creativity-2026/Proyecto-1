@@ -13,7 +13,6 @@ export interface LandingFilm {
 
 const films: LandingFilm[] = filmsData;
 const activeIndex = ref(0);
-const isPaused = ref(false);
 const isHoverOrFocus = ref(false);
 const prefersReducedMotion = ref(false);
 const failedPosters = ref<Record<number, boolean>>({});
@@ -37,10 +36,6 @@ function goTo(index: number): void {
   if (index >= 0 && index < films.length) {
     activeIndex.value = index;
   }
-}
-
-function togglePause(): void {
-  isPaused.value = !isPaused.value;
 }
 
 function handleKeydown(event: KeyboardEvent): void {
@@ -75,7 +70,7 @@ onMounted(() => {
     prefersReducedMotion.value = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
   autoplayTimer = window.setInterval(() => {
-    if (!prefersReducedMotion.value && !isPaused.value && !isHoverOrFocus.value) {
+    if (!prefersReducedMotion.value && !isHoverOrFocus.value) {
       next();
     }
   }, 4500);
@@ -108,33 +103,6 @@ onUnmounted(() => {
       <div>
         <p class="landing-eyebrow">DEL LIBRO A LA PANTALLA</p>
         <h2>Historias que puedes comparar con Selma</h2>
-      </div>
-      <div class="landing-carousel__controls">
-        <button
-          type="button"
-          class="carousel-btn"
-          aria-label="Película anterior"
-          @click="prev"
-        >
-          ←
-        </button>
-        <button
-          type="button"
-          class="carousel-btn carousel-btn--pause"
-          :aria-pressed="isPaused"
-          :aria-label="isPaused ? 'Reanudar carrusel' : 'Pausar carrusel'"
-          @click="togglePause"
-        >
-          {{ isPaused ? "Reanudar" : "Pausar" }}
-        </button>
-        <button
-          type="button"
-          class="carousel-btn"
-          aria-label="Siguiente película"
-          @click="next"
-        >
-          →
-        </button>
       </div>
     </div>
 
@@ -175,17 +143,37 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="landing-carousel__dots" role="tablist" aria-label="Seleccionar película">
+    <div class="landing-carousel__footer">
       <button
-        v-for="(film, index) in films"
-        :key="`dot-${film.title}`"
         type="button"
-        class="carousel-dot"
-        :class="{ 'carousel-dot--active': index === activeIndex }"
-        :aria-label="`Ir a ${film.title}`"
-        :aria-current="index === activeIndex ? 'true' : undefined"
-        @click="goTo(index)"
-      ></button>
+        class="carousel-btn"
+        aria-label="Película anterior"
+        @click="prev"
+      >
+        ←
+      </button>
+
+      <div class="landing-carousel__dots" role="tablist" aria-label="Seleccionar película">
+        <button
+          v-for="(film, index) in films"
+          :key="`dot-${film.title}`"
+          type="button"
+          class="carousel-dot"
+          :class="{ 'carousel-dot--active': index === activeIndex }"
+          :aria-label="`Ir a ${film.title}`"
+          :aria-current="index === activeIndex ? 'true' : undefined"
+          @click="goTo(index)"
+        ></button>
+      </div>
+
+      <button
+        type="button"
+        class="carousel-btn"
+        aria-label="Siguiente película"
+        @click="next"
+      >
+        →
+      </button>
     </div>
   </section>
 </template>

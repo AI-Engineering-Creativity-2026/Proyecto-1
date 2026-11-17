@@ -38,7 +38,7 @@ describe("Landing, FilmCarousel and ChatPage routes", () => {
     expect(wrapper.findAll(".film-slide").length).toBeGreaterThanOrEqual(8);
   });
 
-  it("supports carousel next, prev, dots, keyboard navigation and pause toggle", async () => {
+  it("supports carousel next, prev, dots, keyboard navigation and hover pause", async () => {
     vi.useFakeTimers();
     const wrapper = mount(FilmCarousel);
 
@@ -58,16 +58,7 @@ describe("Landing, FilmCarousel and ChatPage routes", () => {
     await dots[2]!.trigger("click");
     expect(track.attributes("style")).toContain("translate3d(-200%");
 
-    const pauseBtn = wrapper.get(".carousel-btn--pause");
-    expect(pauseBtn.attributes("aria-pressed")).toBe("false");
-    await pauseBtn.trigger("click");
-    expect(pauseBtn.attributes("aria-pressed")).toBe("true");
-
-    await vi.advanceTimersByTimeAsync(9000);
-    expect(track.attributes("style")).toContain("translate3d(-200%");
-
-    // Resume, hover pause, touch swipe, and image error fallback
-    await pauseBtn.trigger("click");
+    // Hover pause, touch swipe, and image error fallback
     await wrapper.get(".landing-carousel").trigger("mouseenter");
     await vi.advanceTimersByTimeAsync(5000);
     expect(track.attributes("style")).toContain("translate3d(-200%");

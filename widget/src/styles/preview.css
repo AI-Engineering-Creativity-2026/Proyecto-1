@@ -130,13 +130,13 @@ body {
 
 .landing-top-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   align-items: center;
-  gap: clamp(24px, 4vw, 52px);
+  gap: clamp(16px, 2.4vw, 32px);
 }
 
 .landing-hero {
-  max-width: 680px;
+  max-width: 600px;
 }
 
 .landing-hero h1 {
@@ -281,12 +281,19 @@ body {
   color: var(--selma-text);
 }
 
+.landing-carousel__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+
 .landing-carousel__dots {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 20px;
 }
 
 .carousel-dot {

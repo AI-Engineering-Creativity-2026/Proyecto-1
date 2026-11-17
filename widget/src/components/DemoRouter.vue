@@ -1,3 +1,9 @@
+<script lang="ts">
+export default {
+  shadowRoot: false,
+};
+</script>
+
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import ChatPage from "./ChatPage.vue";
