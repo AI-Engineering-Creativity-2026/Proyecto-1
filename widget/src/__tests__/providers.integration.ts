@@ -61,4 +61,43 @@ describe("provider attribution", () => {
     });
     expect(noProviderWrapper.find(".provider-attributions").exists()).toBe(false);
   });
+
+  it("renders featured card links and large italic verdict without raw IDs", () => {
+    const wrapper = mount(MessageBubble, {
+      props: {
+        message: {
+          id: "featured-msg",
+          role: "agent",
+          content: "Comparación lista.\n\n**Veredicto: Vale la pena verla.**",
+          timestamp: "2026-09-22T12:00:00.000Z",
+          actions: [
+            {
+              kind: "open_url",
+              url: "https://www.imdb.com/title/tt0083658/",
+              source: "imdb",
+              title: "Blade Runner",
+              year: 1982,
+            },
+            {
+              kind: "open_url",
+              url: "https://books.google.com/books?id=jUX8N9kiCiQC",
+              source: "google_books",
+              title: "Do Androids Dream of Electric Sheep?",
+            },
+            {
+              kind: "open_url",
+              url: "https://evil.example/tt0083658",
+              source: "imdb",
+            },
+          ],
+        },
+      },
+    });
+
+    const card = wrapper.get(".featured-card");
+    expect(card.text()).toContain("Blade Runner (1982) — IMDb");
+    expect(card.text()).toContain("Do Androids Dream of Electric Sheep? — Google Books");
+    expect(card.text()).toContain("Veredicto: Vale la pena verla.");
+    expect(card.text()).not.toContain("evil.example");
+  });
 });

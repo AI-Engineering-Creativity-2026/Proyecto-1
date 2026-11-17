@@ -1,12 +1,207 @@
-html,
-body,
-#app,
-agichat-widget {
-  min-width: 320px;
-  min-height: 100%;
-  margin: 0;
+:root {
+  --mook-bg-outer: #06191b;
+  --mook-bg-stage: #0a2b2e;
+  --mook-bg-radial: #14595a;
+  --mook-accent: #ff4a1c;
+  --mook-accent-deep: #b3200b;
+  --mook-lime-glow: #e6ff9a;
+  --mook-heading: #eef7b4;
+  --mook-eyebrow: #cfe3a0;
+  --mook-copy: #d4e6e2;
+  --mook-text: #e8f1ee;
+  --mook-serif: "Cormorant Garamond", Georgia, serif;
+  --mook-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --mook-fig-x: 0px;
+  --mook-fig-y: 0px;
+  --mook-fig-scale: 1;
+  --mook-streak-x: 0px;
+  --mook-streak-y: 0px;
+  --mook-grain-x: 0px;
+  --mook-grain-y: 0px;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--mook-bg-outer);
+  color: var(--mook-text);
+  font-family: var(--mook-sans);
+}
+
+.mook-stage {
+  position: relative;
+  display: flex;
   min-height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  background: var(--mook-bg-stage);
+  overflow: hidden;
+}
+
+.mook-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 70% at 30% 70%, var(--mook-bg-radial) 0%, var(--mook-bg-stage) 70%);
+  pointer-events: none;
+}
+
+.mook-figure {
+  position: absolute;
+  left: 14%;
+  top: 30%;
+  width: 340px;
+  height: 620px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--mook-accent) 0%, var(--mook-accent-deep) 55%, transparent 100%);
+  filter: blur(46px);
+  opacity: 0.9;
+  pointer-events: none;
+  will-change: transform;
+  transform: translate3d(var(--mook-fig-x), var(--mook-fig-y), 0) rotate(14deg) scale(var(--mook-fig-scale));
+}
+
+.mook-lime-glow {
+  position: absolute;
+  left: 8%;
+  top: 52%;
+  width: 620px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--mook-lime-glow), transparent);
+  filter: blur(70px);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.mook-streak {
+  position: absolute;
+  left: 34%;
+  top: -6%;
+  width: 260px;
+  height: 700px;
+  background: linear-gradient(180deg, transparent, var(--mook-accent), transparent);
+  filter: blur(40px);
+  opacity: 0.35;
+  pointer-events: none;
+  will-change: transform;
+  transform: translate3d(var(--mook-streak-x), var(--mook-streak-y), 0) rotate(24deg);
+}
+
+.mook-grain {
+  position: absolute;
+  inset: -16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  pointer-events: none;
+  will-change: transform;
+  transform: translate3d(var(--mook-grain-x), var(--mook-grain-y), 0);
+}
+
+.mook-hero {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 44px 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.mook-topbar,
+.mook-bottombar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--mook-eyebrow);
+}
+
+.mook-bottombar {
+  letter-spacing: 0.18em;
+}
+
+.mook-mood {
+  margin: 0 0 18px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--mook-eyebrow);
+}
+
+.mook-editorial h1 {
+  margin: 0;
+  font-family: var(--mook-serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(56px, 9.16vw, 132px);
+  line-height: 0.92;
+  color: var(--mook-heading);
+}
+
+.mook-lead {
+  margin: 28px 0 0;
+  max-width: 420px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--mook-copy);
+}
+
+.mook-frame-number {
+  font-family: var(--mook-serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 44px;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1;
+  color: var(--mook-heading);
+}
+
+.mook-dock {
+  position: relative;
+  width: 460px;
+  flex: none;
+  height: 100vh;
+  max-height: 100vh;
+}
+
+@media (max-width: 1180px) {
+  .mook-hero {
+    padding: 36px 36px;
+  }
+
+  .mook-dock {
+    width: clamp(360px, 34vw, 460px);
+  }
+}
+
+@media (max-width: 899px) {
+  .mook-stage {
+    flex-direction: column;
+  }
+
+  .mook-hero {
+    padding: 28px 24px 104px;
+    min-height: 100vh;
+  }
+
+  .mook-topbar {
+    flex-wrap: wrap;
+    font-size: 10px;
+  }
+
+  .mook-dock {
+    width: 0;
+    height: 0;
+  }
 }

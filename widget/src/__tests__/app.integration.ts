@@ -130,8 +130,8 @@ describe("App", () => {
     await nextTick();
 
     expect(open).toHaveBeenCalledWith(url, "_blank");
-    expect(wrapper.get('[role="status"]').text()).toContain("blocked the pop-up");
-    const fallbackButton = wrapper.get('[aria-label="Open IMDb in a new tab"]');
+    expect(wrapper.get('[role="status"]').text()).toContain("bloqueó la ventana emergente");
+    const fallbackButton = wrapper.get('[aria-label="Abrir IMDb en una pestaña nueva"]');
     expect(fallbackButton.exists()).toBe(true);
 
     await fallbackButton.trigger("click");

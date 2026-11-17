@@ -1,13 +1,41 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#294f40">
-    <title>AGIChat embedded widget demo</title>
+    <meta name="theme-color" content="#06191b">
+    <title>Mook — Selma</title>
   </head>
   <body>
-    <div id="agichat-demo-widget"></div>
+    <main class="mook-stage">
+      <div class="mook-backdrop" aria-hidden="true"></div>
+      <div class="mook-figure" aria-hidden="true"></div>
+      <div class="mook-lime-glow" aria-hidden="true"></div>
+      <div class="mook-streak" aria-hidden="true"></div>
+      <div class="mook-grain" aria-hidden="true"></div>
+
+      <section class="mook-hero" aria-labelledby="mook-title">
+        <header class="mook-topbar">
+          <span>MOOK — SELMA</span>
+          <span>CINE · LIBROS · <time id="mook-live-time">--:--</time></span>
+        </header>
+
+        <div class="mook-editorial">
+          <p class="mook-mood">ESTADO DE ÁNIMO: NOSTALGIA</p>
+          <h1 id="mook-title">Una película<br>para esta<br>noche.</h1>
+          <p class="mook-lead">
+            Selma recomienda películas, te muestra su póster y las compara con el libro que las inspiró, para decidir si vale la pena verlas.
+          </p>
+        </div>
+
+        <footer class="mook-bottombar">
+          <span>GUATEMALA · FOTOGRAMA 21.04</span>
+          <span class="mook-frame-number" aria-hidden="true">21.04</span>
+        </footer>
+      </section>
+
+      <aside id="agichat-demo-widget" class="mook-dock" aria-label="Asistente Selma"></aside>
+    </main>
     <script type="module" src="/src/demo.ts"></script>
   </body>
 </html>

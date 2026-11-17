@@ -6,6 +6,8 @@ export interface AGIChatConfig {
   containerId: string;
   apiUrl: string;
   conversationId?: string;
+  assistantName?: string;
+  mode?: "floating" | "docked";
   theme?: {
     primaryColor?: string;
     fontFamily?: string;
@@ -36,7 +38,7 @@ export function createConversationId(explicitId?: string): string {
 }
 
 export function applyTheme(element: HTMLElement, theme: AGIChatConfig["theme"]): void {
-  if (theme?.primaryColor) element.style.setProperty("--agichat-primary-color", theme.primaryColor);
+  element.style.setProperty("--agichat-primary-color", theme?.primaryColor ?? "#ff4a1c");
   if (theme?.fontFamily) element.style.setProperty("--agichat-font-family", theme.fontFamily);
 }
 
@@ -53,6 +55,8 @@ export function init(config: AGIChatConfig): void {
   const element = document.createElement(widgetTagName);
   element.setAttribute("api-url", config.apiUrl);
   element.setAttribute("conversation-id", createConversationId(config.conversationId));
+  element.setAttribute("assistant-name", config.assistantName?.trim() || "Selma");
+  element.setAttribute("mode", config.mode === "docked" ? "docked" : "floating");
   applyTheme(element, config.theme);
   container.appendChild(element);
   mountedElement = element;

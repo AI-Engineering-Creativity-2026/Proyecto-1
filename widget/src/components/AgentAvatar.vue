@@ -6,7 +6,7 @@ withDefaults(
     size?: "small" | "large";
   }>(),
   {
-    label: "Nova",
+    label: "Selma",
     online: false,
     size: "small",
   },
@@ -18,7 +18,7 @@ withDefaults(
     class="agent-avatar"
     :class="`agent-avatar--${size}`"
     role="img"
-    :aria-label="`${label} avatar${online ? ', online' : ''}`"
+    :aria-label="`Avatar de ${label}${online ? ', en línea' : ''}`"
   >
     <svg viewBox="0 0 48 48" aria-hidden="true">
       <g transform="translate(0, -2.4)">
