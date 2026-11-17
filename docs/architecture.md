@@ -6,69 +6,92 @@ Este documento detalla la arquitectura de software del SDK de widget de chat de 
 
 ## 1. Diagrama de Alto Nivel (Mermaid.js)
 
-El sistema está diseñado en una **arquitectura por capas desacopladas (3 tiers)** que separa la simulación/agente de backend, la lógica de estado y dominio, y la capa de presentación visual.
+El sistema evoluciona de una arquitectura de 3 capas desacopladas a una **topología distribuida orientada a servicios** donde el servidor WebSocket es completamente *stateless* y las capacidades de datos externos se aíslan en servidores **MCP (Model Context Protocol)** independientes.
 
 ```mermaid
 flowchart TB
-    subgraph HostApp["Aplicación Host (Cliente Externo)"]
-        HTML["Documento HTML / SPA"]
-        Script["&lt;script src='widget.js'&gt;"]
-        GlobalAPI["window.AGIChat.init(config)"]
+    subgraph Client["Navegador del Cliente"]
+        Host["Aplicación Host / Landing Mook"]
+        Widget["Widget Vue 3 (&lt;agichat-widget&gt; / window.AGIChat)<br/>Markdown + DOMPurify + Allowlist + Pósters"]
+        Core["Core (@agichat/core)<br/>useChat() · ChatSession · Estado en Memoria"]
     end
 
-    subgraph WidgetTier["Capa de Presentación: Widget (Vue 3 / Custom Element)"]
-        CE["Custom Element: &lt;agichat-widget&gt;"]
-        AppVue["App.vue (Contenedor &amp; Transiciones)"]
-        ChatPanel["ChatPanel.vue (Vista Principal)"]
-        Components["Componentes Atómicos<br/>(Composer, Bubbles, Avatar, Suggestions, Typing)"]
-        MarkdownParser["Markdown Engine (marked + DOMPurify)<br/>Renderizado y Sanitización XSS"]
+    subgraph API["Backend Stateless (Elysia + Bun :3000)"]
+        WS["WebSocket /ws + GET /api/quota + GET /health"]
+        Val["Validación TypeBox (@agichat/contracts)"]
+        Port["AgentPort (Interfaz Única de Agente)"]
+        Orch["Sistema Multiagente / Mock / Respaldo Demo"]
     end
 
-    subgraph CoreTier["Capa de Dominio &amp; Transporte: Core (@agichat/core)"]
-        UseChat["Composable: useChat()"]
-        ChatSession["Servicio: ChatSession (State Machine &amp; Resiliencia)"]
-        StateMem["Estado Reactivo en Memoria (Ref&lt;ChatState&gt;)<br/>Historial, Status, Errores"]
-        Transport["Adaptador WebSocket (Backoff Reconnect, Queue)"]
+    subgraph LLM["Proveedor LLM"]
+        Groq["Groq API (openai/gpt-oss-20b)"]
     end
 
-    subgraph ServerTier["Capa de Backend / Simulación: Mock API (Elysia + Bun)"]
-        WSHandler["WebSocket Route (/ws)"]
-        SchemaValidator["Validador TypeBox (Incoming &amp; Outgoing)"]
-        ChatHandler["ChatHandler (Simulación de Latencia &amp; Errores)"]
-        Phase2Agent["[Fase 2] Agente de IA Real"]
+    subgraph MCP["Servidores MCP Independientes (Streamable HTTP)"]
+        TMDB["tmdb-mcp (:3101/mcp)<br/>Caché TTL + Cuota Diaria (900 req/día)"]
+        Books["books-mcp (:3102/mcp)<br/>Caché TTL + Cuota Diaria (900 req/día)"]
     end
 
-    %% Relaciones
-    HTML -.-> Script
-    Script --> GlobalAPI
-    GlobalAPI --> CE
-    CE --> AppVue
-    AppVue --> ChatPanel
-    ChatPanel --> Components
-    ChatPanel --> MarkdownParser
+    subgraph Upstream["APIs Externas (Free Tier)"]
+        TMDBAPI["The Movie Database API"]
+        BooksAPI["Google Books API"]
+    end
 
-    AppVue <-->|"useChat() / props &amp; callbacks"| UseChat
-    UseChat <--> ChatSession
-    ChatSession <--> StateMem
-    ChatSession <--> Transport
-
-    Transport <-->|"WebSocket JSON Protocol<br/>(user_message, agent_typing, agent_message, error)"| WSHandler
-    WSHandler <--> SchemaValidator
-    WSHandler <--> ChatHandler
-    ChatHandler -.->|"Sustituible en Fase 2"| Phase2Agent
-
-    classDef host fill:#f0f4f8,stroke:#334e68,stroke-width:2px;
-    classDef widget fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;
-    classDef core fill:#fef3c7,stroke:#d97706,stroke-width:2px;
-    classDef server fill:#dcfce7,stroke:#16a34a,stroke-width:2px;
-
-    class HostApp host;
-    class WidgetTier widget;
-    class CoreTier core;
-    class ServerTier server;
+    Host --> Widget
+    Widget <-->|"Props / Eventos"| Core
+    Core <-->|"WebSocket JSON (CONTRACTS.md)"| WS
+    WS <--> Val
+    Val <--> Port
+    Port --> Orch
+    Orch <-->|"Inferencia / Tool Calling"| Groq
+    Orch <-->|"MCP Streamable HTTP"| TMDB
+    Orch <-->|"MCP Streamable HTTP"| Books
+    TMDB <-->|"HTTPS"| TMDBAPI
+    Books <-->|"HTTPS"| BooksAPI
 ```
 
-### 1.1 Diagrama de Secuencia del Ciclo de Vida del Mensaje
+### 1.1 Justificación de Escalabilidad
+
+1. **Servidor backend sin estado (*stateless*)**: `server/` no persiste sesiones en disco ni mantiene estado compartido entre peticiones; el historial vive en memoria del cliente (`packages/core/`) y la ventana reciente viaja en cada turno (`AgentPort`), permitiendo escalar horizontalmente múltiples réplicas detrás de un balanceador de carga con afinidad WebSocket.
+2. **Servidores MCP desacoplados (`tmdb-mcp` y `books-mcp`)**: Exponen herramientas reutilizables vía Streamable HTTP (`3101` y `3102`), por lo que pueden escalarse de forma independiente al servidor de chat y ser consumidos por otros agentes futuros sin duplicar clientes ni credenciales.
+3. **Caché TTL y presupuesto diario en `@agichat/mcp-shared`**: Ambas instancias MCP comparten una caché en memoria con TTL configurable (`MCP_CACHE_TTL_MS`, máx. `MCP_CACHE_MAX_ENTRIES = 500`) y contadores diarios (`TMDB_DAILY_REQUEST_LIMIT = 900`, `GOOGLE_BOOKS_DAILY_REQUEST_LIMIT = 900`) por debajo del cap gratuito de `1000` solicitudes/día, evitando agotar cuotas externas bajo picos de tráfico.
+4. **Timeouts y degradación controlada**: Se aplican timeouts por capa (`AGENT_TIMEOUT_MS`, `CLIENT_TIMEOUT_MS`, `TMDB_UPSTREAM_TIMEOUT_MS`, `GOOGLE_BOOKS_UPSTREAM_TIMEOUT_MS`) y respaldo determinista en modo presentación (`DemoFallbackAgent`) ante límites de tasa (`429`).
+
+---
+
+## 2. Arquitectura de Bajo Nivel de Agentes
+
+El sistema multiagente sigue una **clasificación jerárquica y centralizada**:
+
+- **Centralizada**: Todo mensaje del usuario entra únicamente por `AgentPort` hacia `OrchestratorAgent`, que mantiene el control del flujo, aplica las guardas de seguridad (`prompt-security.ts` contra **LLM01** y **LLM07**) y construye la respuesta final del contrato (`agent-output.ts`).
+- **Jerárquica**: `OrchestratorAgent` decide la intención y delega la ejecución especializada a subagentes subordinados (`MovieAgent` y `ComparisonAgent`), sin comunicación lateral *peer-to-peer* entre subagentes ni llamadas directas a APIs REST externas (todo acceso a datos ocurre vía herramientas MCP).
+
+```mermaid
+flowchart TD
+    In["Mensaje de Usuario (AgentPort)"] --> Guard["Guardas de Seguridad (prompt-security.ts)<br/>Bloqueo LLM01 (Inyección) &amp; LLM07 (Fuga de Prompt)"]
+    Guard -->|"Bloqueado"| SafeRefusal["Negativa Segura (sin llamar al LLM)"]
+    Guard -->|"Válido"| Orch["OrchestratorAgent (Coordinador Central)"]
+
+    Orch -->|"Intención: recomendar / explorar cine"| Movie["Subagente: MovieAgent"]
+    Orch -->|"Intención: comparar película vs. libro"| Comp["Subagente: ComparisonAgent"]
+    Orch -->|"429 / Error de herramienta (modo demo)"| Fallback["DemoFallbackAgent (Respaldo MCP Directo)"]
+
+    Movie -->|"search_movies · discover_movies<br/>get_movie_details · get_recommendations"| TMDBMCP["tmdb-mcp"]
+    Comp -->|"search_movies · get_movie_details"| TMDBMCP
+    Comp -->|"search_books · get_book_details"| BooksMCP["books-mcp"]
+    Fallback --> TMDBMCP
+    Fallback --> BooksMCP
+
+    Movie --> Output["agent-output.ts<br/>Markdown + poster_url + actions (Allowlist IMDb / Google Books)"]
+    Comp --> Output
+    Fallback --> Output
+```
+
+- **Por qué es jerárquica y centralizada**: Evita ciclos o condiciones de carrera entre subagentes, concentra la política anti-inyección en un único punto antes y después de consultar datos no confiables de terceros, y garantiza que todas las salidas cumplan el esquema `AgentMessageSchema` de `CONTRACTS.md` (incluyendo la allowlist de URLs para pósters y pestañas de IMDb/Google Books).
+
+---
+
+### 2.1 Diagrama de Secuencia del Ciclo de Vida del Mensaje
 
 ```mermaid
 sequenceDiagram
