@@ -58,6 +58,22 @@ export type ComparisonRuntime = (
   book: BookDetailsResult,
 ) => Promise<ComparisonAssessment>;
 
+export interface SourceBookIdentification {
+  hasSourceBook: boolean;
+  bookTitle?: string;
+  bookAuthor?: string;
+}
+
+export type SourceBookIdentifier = (
+  movie: MovieForComparison,
+) => Promise<SourceBookIdentification>;
+
+const SourceBookIdentificationSchema = Type.Object({
+  hasSourceBook: Type.Boolean(),
+  bookTitle: Type.Optional(Type.String({ maxLength: 250 })),
+  bookAuthor: Type.Optional(Type.String({ maxLength: 200 })),
+});
+
 export interface ComparisonAgentExecution {
   content: string;
   book: BookDetailsResult | null;
@@ -66,8 +82,19 @@ export interface ComparisonAgentExecution {
 
 const NO_BOOK_MESSAGE =
   "No encontré un libro asociado con esta película en Google Books, así que no puedo hacer una comparación fiable.";
+const NO_SOURCE_BOOK_MESSAGE = (title: string) =>
+  `La película **${escapeMarkdown(title)}** no está basada en un libro fuente conocido, por lo que no aplica una comparación con libro.`;
+const UNVERIFIED_BOOK_MESSAGE =
+  "No pude verificar un libro fuente confiable en Google Books que coincida con la obra original de esta película, así que no puedo emitir una comparación ni un veredicto.";
 const SAFE_ERROR_MESSAGE =
   "No se pudo completar la comparación con el libro. Intenta de nuevo.";
+
+const IDENTIFY_BOOK_INSTRUCTIONS = [
+  "Identifica si la película indicada está basada en un libro (novela, relato o no ficción).",
+  "Si es una historia original que no adapta un libro, devuelve hasSourceBook: false.",
+  "Si adapta un libro, devuelve hasSourceBook: true con el título original más conocido del libro (por ejemplo, para 'Blade Runner' es 'Do Androids Dream of Electric Sheep?') y el nombre del autor (por ejemplo 'Philip K. Dick').",
+  "Llama únicamente a la herramienta identify_source_book.",
+].join(" ");
 
 export const COMPARISON_INSTRUCTIONS = [
   "Eres el subagente de comparación de películas y libros de AGIChat. Responde en español y Markdown.",
@@ -102,6 +129,7 @@ export class ComparisonAgent {
   constructor(
     books: BooksMcpClient,
     private readonly runtime: ComparisonRuntime,
+    private readonly identifySourceBook?: SourceBookIdentifier,
   ) {
     this.tools = createComparisonAgentTools(books);
   }
@@ -114,12 +142,41 @@ export class ComparisonAgent {
     validateMovie(movie);
 
     try {
-      const matches = await this.tools.searchBooks({ title: movie.title.trim() });
-      const candidate = matches.results[0];
-      if (!candidate) return { content: NO_BOOK_MESSAGE, book: null, verdict: null };
+      const normalizedMovie = normalizeMovie(movie);
+      let searchTitle = normalizedMovie.title;
+      let expectedAuthor: string | undefined;
+
+      if (this.identifySourceBook) {
+        const identified = await this.identifySourceBook(normalizedMovie);
+        if (!identified.hasSourceBook || !identified.bookTitle?.trim()) {
+          return {
+            content: NO_SOURCE_BOOK_MESSAGE(normalizedMovie.title),
+            book: null,
+            verdict: null,
+          };
+        }
+        searchTitle = identified.bookTitle.trim();
+        expectedAuthor = identified.bookAuthor?.trim() || undefined;
+      }
+
+      const matches = await this.tools.searchBooks({
+        title: searchTitle,
+        ...(expectedAuthor ? { author: expectedAuthor } : {}),
+      });
+      const candidate = this.identifySourceBook
+        ? findVerifiedBookCandidate(matches.results, searchTitle, expectedAuthor)
+        : matches.results[0];
+      if (!candidate) {
+        return {
+          content: this.identifySourceBook && matches.results.length > 0
+            ? UNVERIFIED_BOOK_MESSAGE
+            : NO_BOOK_MESSAGE,
+          book: null,
+          verdict: null,
+        };
+      }
 
       const book = await this.tools.getBookDetails({ volumeId: candidate.volumeId });
-      const normalizedMovie = normalizeMovie(movie);
       const assessment = await this.runtime(normalizedMovie, book);
       if (!Value.Check(ComparisonAssessmentSchema, assessment)) {
         throw new Error("Invalid comparison assessment.");
@@ -152,6 +209,32 @@ export function createComparisonAgent(
   books: BooksMcpClient,
   model: LanguageModel,
 ): ComparisonAgent {
+  const identifySourceBook: SourceBookIdentifier = async (movie) => {
+    let identification: SourceBookIdentification | undefined;
+    await generateText({
+      model,
+      instructions: IDENTIFY_BOOK_INSTRUCTIONS,
+      prompt: JSON.stringify({ title: movie.title, year: movie.year ?? null, overview: movie.overview }),
+      tools: {
+        identify_source_book: tool({
+          description: "Identifica el libro fuente de la película si existe.",
+          inputSchema: jsonSchema<SourceBookIdentification>(SourceBookIdentificationSchema),
+          execute: async (input) => {
+            identification = input;
+            return { accepted: true };
+          },
+        }),
+      },
+      toolChoice: { type: "tool", toolName: "identify_source_book" },
+      stopWhen: stepCountIs(1),
+      maxOutputTokens: 256,
+      maxRetries: 0,
+      telemetry: { isEnabled: false },
+    });
+    if (identification === undefined) throw new Error("Source book identification was not submitted.");
+    return identification;
+  };
+
   return new ComparisonAgent(books, async (movie, book) => {
     let assessment: ComparisonAssessment | undefined;
     await generateText({
@@ -170,12 +253,13 @@ export function createComparisonAgent(
       },
       toolChoice: { type: "tool", toolName: "submit_comparison" },
       stopWhen: stepCountIs(1),
+      maxOutputTokens: 768,
       maxRetries: 0,
       telemetry: { isEnabled: false },
     });
     if (assessment === undefined) throw new Error("Comparison assessment was not submitted.");
     return assessment;
-  });
+  }, identifySourceBook);
 }
 
 export function createConfiguredComparisonAgent(
@@ -268,4 +352,39 @@ function normalizeForMatch(value: string): string {
 
 function escapeMarkdown(value: string): string {
   return value.replace(/[\\`*_{}\[\]()#+.!|>~-]/g, "\\$&").replace(/[\r\n]+/g, " ");
+}
+
+function normalizeTokenText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function findVerifiedBookCandidate(
+  candidates: readonly BookDetailsResult[],
+  expectedTitle: string,
+  expectedAuthor?: string,
+): BookDetailsResult | undefined {
+  const authorTokens = expectedAuthor
+    ? normalizeTokenText(expectedAuthor).split(" ").filter((t) => t.length >= 3)
+    : [];
+  const titleTokens = normalizeTokenText(expectedTitle)
+    .split(" ")
+    .filter((t) => t.length >= 4);
+
+  return candidates.find((candidate) => {
+    const candidateAuthors = normalizeTokenText(candidate.authors.join(" "));
+    const authorOk = authorTokens.length === 0 ||
+      authorTokens.some((token) => candidateAuthors.includes(token));
+    if (!authorOk) return false;
+
+    if (titleTokens.length === 0) return true;
+    const candidateTitle = normalizeTokenText(candidate.title);
+    return titleTokens.some((token) => candidateTitle.includes(token));
+  });
 }

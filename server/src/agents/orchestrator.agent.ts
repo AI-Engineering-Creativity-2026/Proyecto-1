@@ -16,7 +16,7 @@ import { MockAgent } from "./mock.agent";
 import { createAgentOutputMessages, type AgentPresentationEvidence } from "./agent-output";
 import { isDirectPromptInjection, UNTRUSTED_CONTENT_POLICY } from "./prompt-security";
 import type { AgentPort, ConversationContext } from "./agent.port";
-import type { McpClients } from "../mcp/mcp.clients";
+import type { McpClients, TmdbMcpClient } from "../mcp/mcp.clients";
 import { connectMcpClients, readMcpClientConfig } from "../mcp/mcp.clients";
 type BookDetails = Static<typeof McpToolResponseSchemas.books.get_book_details>;
 
@@ -130,6 +130,7 @@ export class OrchestratorAgent implements AgentPort {
           async (input) => {
             try {
               const result = await this.tools.compareMovieWithBook(input);
+              if (result.movies?.length) evidence.movies.push(...result.movies);
               if (result.book !== undefined) evidence.book = result.book;
               if (result.verdict !== undefined && result.verdict !== null) comparisonVerdict = result.verdict;
               lastToolContent = result.content;
@@ -243,9 +244,13 @@ export function createOrchestratorSdkTools(tools: OrchestratorTools) {
           ...(input.year !== undefined ? { year: input.year } : {}),
           ...(input.genres !== undefined ? { genres: input.genres } : {}),
         });
-        return result.book?.volumeId
-          ? `${result.content}\n\n[bookVolumeId disponible: ${result.book.volumeId}]`
-          : result.content;
+        const movieIds = (result.movies ?? [])
+          .map((item) => item.movie.imdb_id)
+          .filter((id): id is string => id !== null);
+        const tags: string[] = [];
+        if (movieIds.length > 0) tags.push(`imdbIds disponibles: ${[...new Set(movieIds)].join(", ")}`);
+        if (result.book?.volumeId) tags.push(`bookVolumeId disponible: ${result.book.volumeId}`);
+        return tags.length > 0 ? `${result.content}\n\n[${tags.join(" | ")}]` : result.content;
       },
     }),
     select_featured_items: tool({
@@ -264,6 +269,7 @@ export function createOrchestratorAgent(
   comparisonAgent: ReturnType<typeof createComparisonAgent>,
   model: LanguageModel,
   now?: () => Date,
+  tmdb?: TmdbMcpClient,
 ): OrchestratorAgent {
   const tools = createOrchestratorTools(
     async ({ request }) => {
@@ -271,9 +277,32 @@ export function createOrchestratorAgent(
       return { content: execution.content, movies: execution.evidence };
     },
     async (movie) => {
-      const execution = await comparisonAgent.runWithEvidence(movie);
+      let enrichedMovie = movie;
+      const movies: MovieAgentEvidence[] = [];
+      if (tmdb) {
+        try {
+          const found = await tmdb.searchMovies({
+            query: movie.title,
+            ...(movie.year !== undefined && movie.year !== null ? { year: movie.year } : {}),
+          });
+          const match = found.results[0];
+          if (match) {
+            movies.push({ source: "search_movies", movie: match });
+            enrichedMovie = {
+              title: match.title ?? movie.title,
+              overview: movie.overview.trim() ? movie.overview : match.overview,
+              year: movie.year ?? match.year,
+              genres: movie.genres?.length ? movie.genres : match.genres,
+            };
+          }
+        } catch {
+          // Keep user-supplied movie details when optional TMDB enrichment fails.
+        }
+      }
+      const execution = await comparisonAgent.runWithEvidence(enrichedMovie);
       return {
         content: execution.content,
+        ...(movies.length > 0 ? { movies } : {}),
         book: execution.book,
         ...(execution.verdict !== null ? { verdict: execution.verdict } : {}),
       };
@@ -311,6 +340,8 @@ export class ConfiguredOrchestratorAgent implements AgentPort {
       createMovieAgent(clients.tmdb, this.model),
       createComparisonAgent(clients.books, this.model),
       this.model,
+      undefined,
+      clients.tmdb,
     ));
     const orchestrator = await this.initialized;
     return orchestrator.respond(message, context);
