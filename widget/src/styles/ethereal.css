@@ -1,0 +1,134 @@
+.ethereal-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background: #06191b;
+}
+
+.ethereal-bg__base {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(62% 72% at 28% 70%, #14595a 0%, #0a2b2e 55%, #06191b 100%);
+}
+
+.ethereal-bg__layer {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.ethereal-bg__ember {
+  left: 10%;
+  top: 26%;
+  width: 36vw;
+  min-width: 260px;
+  max-width: 480px;
+  height: 62vh;
+  min-height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 74, 28, 0.92) 0%, rgba(179, 32, 11, 0.65) 55%, transparent 100%);
+  filter: blur(66px);
+  opacity: 0.72;
+  animation: ethereal-ember 22s ease-in-out infinite alternate;
+}
+
+.ethereal-bg__crimson {
+  left: 24%;
+  top: 44%;
+  width: 26vw;
+  min-width: 200px;
+  height: 44vh;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(212, 48, 18, 0.75) 0%, rgba(110, 18, 8, 0.35) 60%, transparent 100%);
+  filter: blur(74px);
+  opacity: 0.56;
+  animation: ethereal-crimson 31s ease-in-out infinite alternate;
+}
+
+.ethereal-bg__lime {
+  left: 34%;
+  top: 6%;
+  width: 30vw;
+  min-width: 220px;
+  height: 42vh;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(230, 255, 154, 0.22) 0%, rgba(20, 89, 90, 0.14) 55%, transparent 100%);
+  filter: blur(82px);
+  opacity: 0.65;
+  animation: ethereal-lime 37s ease-in-out infinite alternate;
+}
+
+.ethereal-bg__streak {
+  left: 22%;
+  top: -12%;
+  width: 48vw;
+  height: 128vh;
+  background: linear-gradient(112deg, transparent 36%, rgba(255, 74, 28, 0.18) 50%, rgba(230, 255, 154, 0.08) 57%, transparent 70%);
+  filter: blur(50px);
+  opacity: 0.72;
+  animation: ethereal-streak 26s ease-in-out infinite alternate;
+}
+
+.ethereal-bg__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+@keyframes ethereal-ember {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 0.66;
+  }
+  50% {
+    transform: translate3d(28px, -18px, 0) scale(1.06) rotate(4deg);
+    opacity: 0.78;
+  }
+  100% {
+    transform: translate3d(-16px, 22px, 0) scale(0.96) rotate(-3deg);
+    opacity: 0.7;
+  }
+}
+
+@keyframes ethereal-crimson {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate3d(-26px, -24px, 0) scale(1.08) rotate(-5deg);
+    opacity: 0.64;
+  }
+}
+
+@keyframes ethereal-lime {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.58;
+  }
+  100% {
+    transform: translate3d(24px, 18px, 0) scale(1.07);
+    opacity: 0.74;
+  }
+}
+
+@keyframes ethereal-streak {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-3deg) scale(1);
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(22px, -14px, 0) rotate(3deg) scale(1.04);
+    opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ethereal-bg__layer {
+    animation: none !important;
+    transform: none !important;
+  }
+}

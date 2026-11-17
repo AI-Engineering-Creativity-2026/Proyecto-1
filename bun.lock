@@ -91,6 +91,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@agichat/core": "workspace:*",
+        "@fontsource/cormorant-garamond": "^5.3.0",
+        "@fontsource/inter": "^5.3.0",
         "dompurify": "^3.2.6",
         "marked": "^16.3.0",
         "vue": "rc",
@@ -444,6 +446,10 @@
     "@exodus/bytes": ["@exodus/bytes@1.16.0", "", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-IcpW84uEn3N7ETtNZMlxKhfl6Pec8rUNGOTBtWbK1FKhJxIFAptZyVrvVRVBimAJxJCgc3PxepxkdWWG4DVzfA=="],
 
     "@fal-ai/client": ["@fal-ai/client@1.10.1", "", { "dependencies": { "@msgpack/msgpack": "^3.0.0-beta2", "eventsource-parser": "^1.1.2", "robot3": "^0.4.1" } }, "sha512-c3AVeH31OioiI2J1BfW8Cryi1DhUYldnY3X35nv6xLMq3fU2NQOo+eYaR5mL2O8MoHHh+HzXdQuIyanIyeq+ug=="],
+
+    "@fontsource/cormorant-garamond": ["@fontsource/cormorant-garamond@5.3.0", "", {}, "sha512-weuGsCirGVWBWqpt6YUp0yLThTe4G8YO45noq8wxeJCRvEpq5lFrxNMFSTxcyOyV5k5otzJ8guDzYegdYlcLMQ=="],
+
+    "@fontsource/inter": ["@fontsource/inter@5.3.0", "", {}, "sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g=="],
 
     "@googleapis/sheets": ["@googleapis/sheets@14.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-fANEl4RQohsPYUWhcLSYyUyE8A8bRfvw/bp8h0t8VDQqTgdQ3itZBkty4nddtdqCAvNDpA+KM66OejVKDd6aFg=="],
 
