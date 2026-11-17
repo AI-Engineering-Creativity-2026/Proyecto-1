@@ -479,7 +479,7 @@ function isMovieRelated(prompt: string): boolean {
     .toLocaleLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  return /\b(pelicula|peliculas|peli|pelis|cine|film|films|movie|movies|libro|libros|novela|novelas|adaptacion|basada|basado|secuela|trilogia|director|actor|actriz|verla|leerlo|ciencia ficcion|sci-fi|terror|horror|comedia|drama|animacion|accion|aventura|thriller|suspenso|fantasia|romance|documental)\b|\b(?:compar|recomiend|recomendar|sugier|suger|similar|parecid)/i.test(normalized);
+  return /\b(pelicula|peliculas|peli|pelis|cine|film|films|movie|movies|libro|libros|novela|novelas|adaptacion|basada|basado|secuela|trilogia|director|actor|actriz|verla|leerlo|ciencia ficcion|sci-fi|terror|horror|comedia|drama|animacion|stop[- ]?motion|accion|aventura|thriller|suspenso|misterio|psicologico|fantasia|romance|documental|quiero ver|que ver|algo como|vale la pena|es fiel)\b|\b(?:compar|recomiend|recomendar|sugier|suger|similar|parecid)/i.test(normalized);
 }
 
 function stripTechnicalIds(text: string): string {
