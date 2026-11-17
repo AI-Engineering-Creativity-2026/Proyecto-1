@@ -26,22 +26,30 @@ Al crear archivos, usa esta organización salvo que una decisión documentada ju
 ```text
 server/
   src/
-    schemas/        # TypeBox y tipos del protocolo WebSocket
-    handlers/       # comportamiento del Mock API
+    agents/         # AgentPort, OrchestratorAgent, subagentes, Groq y respaldo demo
+    handlers/       # comportamiento WebSocket y manejo de errores
+    mcp/            # clientes MCP (Streamable HTTP) hacia TMDB y Google Books
+    schemas/        # TypeBox y validación del protocolo WebSocket
   tests/
+servers/
+  tmdb-mcp/         # MCP Server independiente para The Movie Database
+  books-mcp/        # MCP Server independiente para Google Books
 packages/
+  contracts/        # esquemas TypeBox compartidos (WS, UI actions, MCP)
   core/
     src/
       composables/    # useChat y conexión WebSocket
       types/          # estado y tipos del dominio
-      services/       # adaptadores de transporte, si son necesarios
+      services/       # adaptadores de transporte
+  mcp-shared/       # caché TTL, presupuesto diario y validadores MCP compartidos
   tests/
 widget/
   src/
-    components/     # vista del widget y componentes pequeños
+    components/     # vista del widget, landing Mook y componentes pequeños
     composables/    # comportamiento estrictamente visual
     styles/
   tests/
+evals/              # suite de evaluaciones funcionales y OWASP (LLM01, LLM07)
 docs/               # arquitectura, contribución y decisiones de diseño
 .github/workflows/  # CI/CD de GitHub Actions
 ```

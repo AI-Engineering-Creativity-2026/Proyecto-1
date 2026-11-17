@@ -1,157 +1,307 @@
-# AGIChat
+# Mook — Selma (AGIChat)
 
-AGIChat es un SDK de widget de chat embebible para clientes de la startup AGIChat.
-La primera fase del proyecto busca construir una experiencia visual alineada al wireframe
-de referencia, con una arquitectura preparada para sustituir el mock por un agente real
-sin rehacer la interfaz.
+[![CI](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/ci.yml)
+[![Release](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/release.yml/badge.svg)](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/release.yml)
 
-## Contexto
+Sistema multiagente de recomendación de cine y comparación película-vs-libro (**Mook / Selma**), construido sobre la evolución del widget embebible **AGIChat**. Permite conversar en tiempo real mediante WebSocket, recomendar películas con póster vía **The Movie Database (TMDB)**, comparar adaptaciones con su libro original vía **Google Books**, abrir enlaces de referencia en **IMDb** y **Google Books** automáticamente tras validar una allowlist estricta, y proteger al agente contra ataques **OWASP LLM01** y **LLM07**, todo respaldado por servidores **MCP** independientes y un servidor backend *stateless*.
 
-La propuesta inicial del proyecto es resolver estos puntos:
+![Landing principal de Mook — Selma](docs/diseno/capturas/demo-01-landing.png)
 
-- Crear un widget de chat que pueda incrustarse fácilmente en productos de terceros.
-- Separar el backend simulado, la lógica de chat y la UI para permitir trabajo paralelo.
-- Mantener el contrato de mensajes estable para no romper el cambio entre mock API y agente real.
-- Renderizar respuestas en Markdown de forma segura desde la UI.
-- Soportar un flujo de desarrollo con GitHub Flow, PRs, CI/CD y cobertura mínima del 80%.
+---
 
-## Wireframe
+## Requisitos
 
-La interfaz base del widget debe seguir el wireframe entregado por la propuesta inicial.
-La imagen de referencia está versionada dentro del repo para que el equipo la tenga a mano:
+- **Bun (`1.4.2` o compatible):** runtime, gestor de paquetes (*workspaces*), bundler y runner de pruebas (`bun.lock`).
+- **Docker y Docker Compose (recomendado):** levanta los cuatro servicios (`tmdb-mcp`, `books-mcp`, `server` y `widget`) con redes internas y *healthchecks* configurados.
+- **Claves de API (Free Tier, sin tarjeta de crédito):**
+  - **Groq API (`GROQ_API_KEY`, `GROQ_MODEL`):** inferencia del orquestador y subagentes.
+  - **The Movie Database (`TMDB_API_READ_ACCESS_TOKEN`, `TMDB_API_KEY`):** registradas para uso **no comercial** por estudiantes del curso **CC3116** de la **Universidad del Valle de Guatemala** (cap gratuito de `1000` solicitudes diarias).
+  - **Google Books API (`GOOGLE_BOOKS_API_KEY`):** free tier de `1000` solicitudes diarias sin tarjeta de crédito.
+- **Navegador moderno:** soporte para ES2022, WebSockets y Custom Elements (`<agichat-widget>`).
 
-![Wireframe de referencia](./docs/images/wireframe.png)
+> [!NOTE]
+> El modo por defecto (`AGENT_MODE=mock`) funciona sin claves externas ni llamadas de red, tanto en desarrollo local como en pruebas y CI.
 
-La paleta, tipografía y estilo visual pueden cambiar, pero los flujos y estados de UX deben
-respetar esta referencia salvo que el equipo acuerde una modificación explícita.
+---
 
-## Interfaz final implementada
+## Compilación y ejecución
 
-A continuación se muestra el resultado final del widget integrado y su entorno de demostración:
-
-![Vista previa del widget implementado](./docs/images/widget-preview.png)
-
-### Características clave de la interfaz:
-- **Diseño responsive adaptable**: En pantallas de escritorio y monitores amplios aprovecha el espacio horizontal mediante una distribución en dos columnas (hero/introducción a la izquierda y panel de chat a la derecha), adaptándose automáticamente a una columna fluida en tablets y móviles.
-- **Experiencia de usuario y estados del wireframe**:
-  - **Estado inicial**: Pantalla de bienvenida con avatar y sugerencias clicables (*quick replies*).
-  - **Conversación en tiempo real**: Mensajes diferenciados para usuario y agente con marcas de tiempo en la hora local del sistema.
-  - **Feedback de respuesta**: Indicador animado de tipeo (*typing indicator*) y deshabilitación preventiva del compositor mientras el agente responde.
-  - **Manejo de errores**: Tarjeta de alerta informativa con botón de reintento (*Try again*) ante fallos de conexión.
-- **Renderizado seguro de Markdown**: Las respuestas del agente se formatean con Markdown enriquecido y saneado estricto contra vulnerabilidades XSS (vía DOMPurify).
-- **Acceso flotante (*Launcher*)**: Botón inferior para abrir y minimizar el widget con animaciones fluidas preservando el historial en memoria durante la sesión.
-
-## Arquitectura
-
-```mermaid
-flowchart LR
-  A[Mock API<br/>server/] <-- WebSocket JSON --> B[Core<br/>packages/core/]
-  B <-- props/events --> C[Widget<br/>Vue 3 + defineCustomElement]
-  C --> D[window.AGIChat]
-```
-
-- `server/` contiene el mock API con Elysia + Bun y valida el contrato WebSocket.
-- `packages/core/` contiene el composable `useChat`, el estado de dominio y el transporte.
-- `widget/` contiene la UI Vue 3, el montaje como Custom Element y la API pública `window.AGIChat`.
-
-## Estructura del monorepo
-
-```text
-server/
-  src/
-    schemas/        # TypeBox y tipos del protocolo WebSocket
-    handlers/       # lógica del mock API
-packages/
-  core/
-    src/
-      composables/  # useChat y conexión WebSocket
-      types/        # estado y tipos del dominio
-      services/     # adaptadores de transporte, si hacen falta
-widget/
-  src/
-    components/     # componentes visuales del widget
-      utils/          # renderizado y sanitización de Markdown
-    styles/         # estilos del widget
-docs/               # notas de arquitectura y decisiones
-  images/           # recursos visuales de referencia, como el wireframe
-```
-
-## Documentación y contratos
-
-- [`docs/architecture.md`](./docs/architecture.md) contiene la justificación arquitectónica completa, diagramas en Mermaid.js y la guía para nuevos desarrolladores sobre cómo escalar el proyecto.
-- [`CONTRACTS.md`](./CONTRACTS.md) define el contrato entre Mock API, Core y UI.
-- [`AGENTS.md`](./AGENTS.md) define reglas de colaboración, estructura y límites por capa.
-
-## Comandos
-
-Desde la raíz del repositorio:
-
-```bash
-bun install
-bun run lint
-bun run typecheck
-bun run test:coverage
-bun run build
-```
-
-La CI aplica un gate mínimo de 80% para líneas, funciones, ramas y sentencias a partir
-de los reportes LCOV de Bun y Vitest. El reporte de Vitest incluye componentes `.vue`.
-Los helpers compartidos de pruebas viven en `test/helpers/`.
-
-## Docker Compose
-
-El stack completo se puede levantar desde la raíz con:
+### 1. Modo Docker Compose (recomendado)
 
 ```bash
 cp .env.example .env
+# Configura AGENT_MODE=groq y tus claves en .env (o deja AGENT_MODE=mock)
 docker compose config
 docker compose up --build
 ```
 
-El widget queda disponible en `http://localhost:4173` y el servidor en
-`http://localhost:3000`. Los servicios `tmdb-mcp` y `books-mcp` escuchan internamente
-en los puertos `3101` y `3102`; no se publican directamente al host. El servidor los
-alcanza mediante los nombres DNS de Compose (`tmdb-mcp` y `books-mcp`).
+- **Widget / Landing Mook:** <http://localhost:4173>
+- **Servidor WebSocket / API:** <http://localhost:3000>
+- **Servidores MCP internos:** `tmdb-mcp` (`:3101/mcp`) y `books-mcp` (`:3102/mcp`), accesibles solo en la red interna de Compose.
 
-Por defecto, `AGENT_MODE=mock`, por lo que el stack arranca sin claves de proveedor.
-Para activar el modo real, configura `AGENT_MODE=groq`, `GROQ_API_KEY`, `GROQ_MODEL`,
-las credenciales de TMDB y, si aplica, `GOOGLE_BOOKS_API_KEY` en el `.env` local.
-Las variables de URLs MCP se fijan dentro de Compose para usar la red interna; no
-deben apuntar a `localhost` desde el contenedor del servidor.
+### 2. Modo Docker Compose de presentación (demo resiliente)
 
-Todos los servicios tienen healthcheck. El servidor espera a que ambos MCP estén
-saludables y el widget espera a que el servidor responda antes de iniciar.
-
-Comandos útiles por paquete:
+Incluye `DEMO_FALLBACK_ON_RATE_LIMIT=true`, timeouts ampliados (`AGENT_TIMEOUT_MS=60000`, `CLIENT_TIMEOUT_MS=65000`) y caché extendida (`MCP_CACHE_TTL_MS=3600000`) para evitar interrupciones si Groq alcanza el límite de tokens por minuto durante una demostración en vivo:
 
 ```bash
-bun --cwd server dev
-bun --cwd widget dev
-bun --cwd widget test:unit
+docker compose -f docker-compose.demo.yml up --build
 ```
 
-## Modo real
+### 3. Modo local (sin Docker)
 
-Por defecto `AGENT_MODE=mock`. Para ejecutar el agente real con Groq, TMDB y Google Books:
+En `.env`, configura `TMDB_MCP_URL=http://localhost:3101/mcp` y `BOOKS_MCP_URL=http://localhost:3102/mcp`, y ejecuta en terminales separadas:
 
-1. Configura en `.env` (sin commitear):
-   - `AGENT_MODE=groq`
-   - `GROQ_API_KEY`, `GROQ_MODEL`, `TMDB_API_READ_ACCESS_TOKEN`, `TMDB_API_KEY` y `GOOGLE_BOOKS_API_KEY`
-2. Con Docker Compose:
-   ```bash
-   docker compose up --build
-   ```
-3. En desarrollo local (sin Docker), asegúrate de tener `TMDB_MCP_URL=http://localhost:3101/mcp` y `BOOKS_MCP_URL=http://localhost:3102/mcp` en `.env`, y ejecuta en terminales separadas:
-   ```bash
-   bun run dev:tmdb-mcp
-   bun run dev:books-mcp
-   bun run dev:server
-   bun run dev:widget
-   ```
-El servidor imprime `Agente: groq` (o `Agente: mock`) al iniciar.
+```bash
+bun install
+bun run dev:tmdb-mcp
+bun run dev:books-mcp
+bun run dev:server
+bun run dev:widget
+```
 
-## Notas
+Para compilar los artefactos de producción (`server/dist/` y `widget/dist/`):
 
-- El frontend actual está implementado en `widget/` como base del SDK público.
-- `packages/core/` es la capa compartida donde debe vivir la lógica del chat.
-- El objetivo de esta fase es tener el widget listo para conectar un agente real sin cambiar el contrato.
+```bash
+bun run build
+```
+
+### 4. Pruebas, cobertura, evals y verificación de calidad
+
+```bash
+bun ci                   # Instalación reproducible verificando bun.lock
+bun run lint             # oxlint + eslint
+bun run typecheck        # TypeScript estricto
+bun run test:coverage    # Pruebas Bun + Vitest + verificación de umbral >= 80%
+bun run test:mcp         # Pruebas de servidores y clientes MCP sin red externa
+bun run eval:run         # Suite de evals funcionales y OWASP (LLM01, LLM07) en modo fake
+bun run eval:functional  # Evals funcionales con Promptfoo
+bun run test:e2e         # Pruebas end-to-end y accesibilidad con Playwright
+```
+
+Más detalle en [`server/README.md`](server/README.md) y [`evals/README.md`](evals/README.md).
+
+---
+
+## Habilidades del sistema y experiencia de uso
+
+### Flujo visual y widget embebible
+
+| Capacidad | Implementación | Evidencia |
+| --- | --- | --- |
+| **Widget embebible de Proyecto #1** | `<agichat-widget>` y `window.AGIChat.init(...)` con `useChat` en `@agichat/core` | [`widget/src/index.ts`](widget/src/index.ts) |
+| **Estados del contrato** | `connecting`, `idle`, `waiting_response` (input bloqueado + *typing*), `error` + `retryLastMessage()` | [`CONTRACTS.md`](CONTRACTS.md) |
+| **Markdown seguro** | Conversión con `marked` y sanitización estricta con `DOMPurify` antes del DOM | [`widget/src/utils/`](widget/src/utils/) |
+| **Modo flotante (*dock*) y responsivo** | Launcher flotante y adaptación fluida para escritorio, tablet y móvil | `03-flotante-desktop.jpg`, `04-tablet-1024.jpg`, `05-movil-390.jpg` |
+
+![Comparación Blade Runner vs Do Androids Dream of Electric Sheep? con póster y atribución](docs/diseno/capturas/demo-03-comparacion-blade-runner.png)
+
+| Bienvenida en el chat con Selma | Vista responsive en móvil (`390px`) |
+| --- | --- |
+| ![Bienvenida del chat con Selma](docs/diseno/capturas/demo-02-bienvenida-chat.png) | ![Vista responsiva en móvil (390px)](docs/diseno/capturas/05-movil-390.jpg) |
+
+| Comparación con monitor de cuota en vivo | Apertura automática en Google Books |
+| --- | --- |
+| ![Comparación No Country for Old Men con monitor de cuota en vivo](docs/diseno/capturas/demo-04-comparacion-cuota.png) | ![Apertura automática en Google Books](docs/diseno/capturas/demo-05-google-books.png) |
+
+| Recomendación con póster y aviso proactivo | Apertura automática en IMDb |
+| --- | --- |
+| ![Recomendación de misterio y suspenso con póster](docs/diseno/capturas/demo-08-recomendacion-poster.png) | ![Apertura automática en IMDb](docs/diseno/capturas/demo-09-imdb.png) |
+
+### Capacidades funcionales del agente
+
+- **Recomendaciones de películas (TMDB MCP):** consulta `search_movies`, `discover_movies`, `get_movie_details` y `get_recommendations` vía `tmdb-mcp`. Incluye en la UI el logotipo oficial y el aviso requerido por TMDB (*"This product uses the TMDB API but is not endorsed or certified by TMDB."*).
+- **Comparación película vs. libro (Google Books MCP):** consulta `search_books` y `get_book_details` vía `books-mcp`, contrasta la obra con su adaptación y emite un veredicto sobre si vale la pena verla. Además, Selma anuncia proactivamente al usuario que puede realizar esta comparación cuando lo desee.
+- **Pósteres de películas recomendadas:** adjunta `poster_url` validado contra la allowlist HTTPS de TMDB (`image.tmdb.org`).
+- **Apertura automática de pestañas (IMDb y Google Books):** el servidor emite acciones `open_url` en los metadatos del mensaje y el widget abre la pestaña correspondiente **sin requerir clic del usuario**, validando la allowlist de hosts tanto en servidor como en el widget (`imdb.com`, `www.imdb.com`, `books.google.com`).
+- **Monitor de cuota en vivo (`GET /api/quota`):** la interfaz muestra el consumo diario real y porcentaje de uso de Groq, TMDB y Google Books.
+
+### Seguridad OWASP Top 10 for LLMs (LLM01 y LLM07) y Evals
+
+- **LLM01 — Prompt Injection (directa e indirecta):**
+  - *Directa:* `prompt-security.ts` bloquea intentos de anular instrucciones, suplantar roles o forzar acciones UI arbitrarias antes de invocar al modelo.
+  - *Indirecta:* todo texto proveniente de TMDB o Google Books se marca y procesa como dato no confiable (nunca como instrucción ejecutable), verificado con pruebas dedicadas en [`server/tests/llm01-indirect-injection.test.ts`](server/tests/llm01-indirect-injection.test.ts).
+- **LLM07 — System Prompt Leakage:** rechaza peticiones de ingeniería social (*admin audit*, *debug*, extracción de prompt/herramientas/claves) y valida que ninguna salida ni evento WebSocket filtre cadenas de configuración o secretos.
+- **Suite de Evals ([`evals/report.md`](evals/report.md)):** `11` casos automatizados (`movie-recommendation`, `movie-book-comparison`, `out-of-scope-refusal`, `prompt-extraction-social-engineering`, `llm01-*` y `llm07-*`) ejecutados determinísticamente en CI (`11 aprobados, 0 fallidos`).
+
+### Endpoints HTTP y protocolo WebSocket
+
+- `GET /health` — estado del servidor (`{ "service": "agichat-mock-api", "status": "ok" }`).
+- `GET /api/quota` — consumo diario y porcentaje de uso de Groq, TMDB y Google Books.
+- `WS /ws` — eventos validados con TypeBox (`user_message`, `agent_typing`, `agent_message`, `error`).
+- `GET /` — sirve la build estática del widget y landing Mook cuando existe.
+
+---
+
+## Arquitectura de alto nivel y escalabilidad
+
+```mermaid
+flowchart TB
+    subgraph Client["Navegador del Cliente"]
+        Host["Aplicación Host / Landing Mook"]
+        Widget["Widget Vue 3 (&lt;agichat-widget&gt; / window.AGIChat)<br/>Markdown + DOMPurify + Allowlist + Pósters"]
+        Core["Core (@agichat/core)<br/>useChat() · ChatSession · Estado en Memoria"]
+    end
+
+    subgraph API["Backend Stateless (Elysia + Bun :3000)"]
+        WS["WebSocket /ws + GET /api/quota + GET /health"]
+        Val["Validación TypeBox (@agichat/contracts)"]
+        Port["AgentPort (Interfaz Única de Agente)"]
+        Orch["OrchestratorAgent / MockAgent / DemoFallbackAgent"]
+    end
+
+    subgraph LLM["Proveedor LLM"]
+        Groq["Groq API"]
+    end
+
+    subgraph MCP["Servidores MCP Independientes (Streamable HTTP)"]
+        TMDB["tmdb-mcp (:3101/mcp)<br/>Caché TTL + Cuota 900/día"]
+        Books["books-mcp (:3102/mcp)<br/>Caché TTL + Cuota 900/día"]
+    end
+
+    subgraph Upstream["APIs Externas (Free Tier)"]
+        TMDBAPI["The Movie Database API"]
+        BooksAPI["Google Books API"]
+    end
+
+    Host --> Widget
+    Widget <-->|"Props / Eventos"| Core
+    Core <-->|"WebSocket JSON (CONTRACTS.md)"| WS
+    WS <--> Val
+    Val <--> Port
+    Port --> Orch
+    Orch <-->|"Inferencia / Tool Calling"| Groq
+    Orch <-->|"MCP Streamable HTTP"| TMDB
+    Orch <-->|"MCP Streamable HTTP"| Books
+    TMDB <-->|"HTTPS"| TMDBAPI
+    Books <-->|"HTTPS"| BooksAPI
+```
+
+### Por qué escala esta solución
+
+1. **Backend completamente *stateless*:** `server/` no almacena historial ni sesiones en disco; el estado conversacional reside en memoria del cliente (`packages/core/`) y viaja acotado por turno hacia `AgentPort`, lo que permite escalar réplicas horizontales detrás de un balanceador WebSocket.
+2. **Abstracción en servidores MCP independientes:** `tmdb-mcp` y `books-mcp` corren como servicios HTTP desacoplados usando el protocolo estándar MCP, permitiendo escalarlos por separado y reutilizar exactamente las mismas herramientas desde otros agentes futuros.
+3. **Caché TTL y control estricto de cuota (`@agichat/mcp-shared`):** ambos servidores MCP aplican caché en memoria (`MCP_CACHE_TTL_MS`, máx. `MCP_CACHE_MAX_ENTRIES=500`) y topes diarios (`TMDB_DAILY_REQUEST_LIMIT=900`, `GOOGLE_BOOKS_DAILY_REQUEST_LIMIT=900`) por debajo del límite gratuito de `1000` req/día, protegiendo las APIs ante picos de uso.
+4. **Límites y timeouts por capa:** `AGENT_TIMEOUT_MS`, `CLIENT_TIMEOUT_MS`, `TMDB_UPSTREAM_TIMEOUT_MS` y `GOOGLE_BOOKS_UPSTREAM_TIMEOUT_MS` evitan acumulación de conexiones colgadas, y `DemoFallbackAgent` degrada de forma segura ante límites de tasa (`429`).
+
+Más detalle: [`docs/architecture.md`](docs/architecture.md) · [`docs/decisiones-fase-2.md`](docs/decisiones-fase-2.md)
+
+---
+
+## Arquitectura de bajo nivel de agentes
+
+El sistema multiagente es **jerárquico y centralizado**:
+
+- **Centralizado:** toda entrada pasa por `AgentPort` hacia `OrchestratorAgent`, que centraliza las guardas de seguridad (`prompt-security.ts`), el enrutamiento de intención, la gestión de errores y el ensamblado final de mensajes y acciones (`agent-output.ts`).
+- **Jerárquico:** `OrchestratorAgent` delega tareas especializadas a subagentes subordinados (`MovieAgent` y `ComparisonAgent`) sin comunicación lateral *peer-to-peer* entre ellos ni llamadas directas a APIs externas; todo dato externo entra exclusivamente por herramientas MCP.
+
+```mermaid
+flowchart TD
+    In["Mensaje de Usuario (AgentPort)"] --> Guard["Guardas de Seguridad (prompt-security.ts)<br/>OWASP LLM01 &amp; LLM07"]
+    Guard -->|"Ataque detectado"| Safe["Negativa Segura (sin invocar LLM)"]
+    Guard -->|"Válido"| Orch["OrchestratorAgent (Coordinador Central)"]
+
+    Orch -->|"Recomendación / búsqueda de cine"| Movie["Subagente: MovieAgent"]
+    Orch -->|"Comparación película vs. libro"| Comp["Subagente: ComparisonAgent"]
+    Orch -->|"429 / error de herramienta (modo demo)"| Fallback["DemoFallbackAgent (Respaldo MCP)"]
+
+    Movie -->|"search_movies · discover_movies<br/>get_movie_details · get_recommendations"| TMDBMCP["tmdb-mcp"]
+    Comp -->|"search_movies · get_movie_details"| TMDBMCP
+    Comp -->|"search_books · get_book_details"| BooksMCP["books-mcp"]
+    Fallback --> TMDBMCP
+    Fallback --> BooksMCP
+
+    Movie --> Out["agent-output.ts<br/>Markdown + poster_url + actions (Allowlist IMDb / Google Books)"]
+    Comp --> Out
+    Fallback --> Out
+```
+
+---
+
+## Cumplimiento de rúbrica y requisitos
+
+| Criterio / Requisito | Estado | Evidencia en el repositorio |
+| --- | --- | --- |
+| Reglas de Proyecto #1 (GitHub Flow, cobertura ≥ 80%, contratos, Markdown sanitizado) | ✅ | `.github/workflows/ci.yml`, `scripts/check-coverage.ts`, `CONTRACTS.md` |
+| Evals funcionales y contra OWASP LLM01 y LLM07 | ✅ | `evals/security-eval-cases.ts`, `evals/report.md`, `server/tests/llm01-indirect-injection.test.ts` |
+| Diagrama de arquitectura de alto nivel y justificación de escalabilidad | ✅ | `README.md`, `docs/architecture.md` |
+| Diagrama de bajo nivel de agentes y clasificación jerárquica/centralizada | ✅ | `README.md`, `docs/architecture.md`, `server/src/agents/orchestrator.agent.ts` |
+| Comunicación por widget de Proyecto #1 | ✅ | `widget/`, `packages/core/`, `packages/contracts/` |
+| Recomendación de películas con TMDB + atribución oficial | ✅ | `servers/tmdb-mcp/`, `widget/src/components/ChatPanel.vue` |
+| Comparación película vs. libro con Google Books + aviso proactivo | ✅ | `server/src/agents/comparison.agent.ts`, `servers/books-mcp/` |
+| Apertura automática en nueva pestaña (IMDb y Google Books) | ✅ | `packages/contracts/src/index.ts`, `widget/src/utils/`, allowlist en servidor y UI |
+| Póster de película recomendada | ✅ | `agent-output.ts`, validación HTTPS `image.tmdb.org` |
+| Herramientas abstraídas en MCP Servers independientes | ✅ | `servers/tmdb-mcp/`, `servers/books-mcp/`, `server/src/mcp/mcp.clients.ts` |
+
+---
+
+## Estructura del proyecto
+
+```text
+.
+├── .github/workflows/          # CI (lint, typecheck, coverage >= 80%, build) y Release
+├── docs/                       # Arquitectura, decisiones de diseño y capturas (docs/diseno/capturas/)
+├── evals/                      # Casos funcionales, LLM01, LLM07, runner y reporte (evals/report.md)
+├── packages/
+│   ├── contracts/              # Esquemas TypeBox compartidos (WS, acciones UI, contratos MCP)
+│   ├── core/                   # Composable useChat, ChatSession, reconexión y estado en memoria
+│   └── mcp-shared/             # Caché TTL, presupuesto diario y validadores compartidos
+├── scripts/                    # Verificación de cobertura, bloqueo de red en tests y smoke real
+├── server/
+│   ├── src/
+│   │   ├── agents/             # AgentPort, OrchestratorAgent, MovieAgent, ComparisonAgent, Groq y Fallback
+│   │   ├── handlers/           # Handler WebSocket y manejo seguro de errores
+│   │   ├── mcp/                # Clientes Streamable HTTP hacia tmdb-mcp y books-mcp
+│   │   └── schemas/            # Validación de entrada/salida WebSocket
+│   └── tests/                  # Pruebas unitarias, integración, MCP y LLM01
+├── servers/
+│   ├── tmdb-mcp/               # MCP Server independiente para The Movie Database (:3101)
+│   └── books-mcp/              # MCP Server independiente para Google Books (:3102)
+├── test/                       # Pruebas de integración cruzada Core <-> Server y smoke script
+├── widget/                     # UI Vue 3 (Mook + Selma), Custom Element (<agichat-widget>) y window.AGIChat
+├── AGENTS.md                   # Convenciones de arquitectura, seguridad y flujo de trabajo
+├── CONTRACTS.md                # Contrato formal entre servidor, core y widget
+├── docker-compose.yml          # Stack completo para desarrollo y despliegue
+└── docker-compose.demo.yml     # Stack optimizado para demostración con respaldo ante rate limit
+```
+
+---
+
+## Variables de entorno
+
+Consulta [`.env.example`](.env.example) para la plantilla completa sin secretos:
+
+- **Servidor y Widget:** `PORT`, `ALLOWED_ORIGINS`, `VITE_AGICHAT_API_URL`.
+- **Agente y LLM:** `AGENT_MODE` (`mock` | `groq`), `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_BASE_URL`, `AGENT_TIMEOUT_MS`, `CLIENT_TIMEOUT_MS`, `DEMO_FALLBACK_ON_RATE_LIMIT`.
+- **MCP TMDB:** `TMDB_MCP_PORT`, `TMDB_MCP_URL`, `TMDB_API_READ_ACCESS_TOKEN`, `TMDB_API_KEY`, `TMDB_API_LANGUAGE`, `TMDB_DAILY_REQUEST_LIMIT`, `TMDB_UPSTREAM_TIMEOUT_MS`.
+- **MCP Google Books:** `BOOKS_MCP_PORT`, `BOOKS_MCP_URL`, `GOOGLE_BOOKS_API_KEY`, `GOOGLE_BOOKS_DAILY_REQUEST_LIMIT`, `GOOGLE_BOOKS_UPSTREAM_TIMEOUT_MS`.
+- **Caché MCP:** `MCP_CACHE_TTL_MS`, `MCP_CACHE_MAX_ENTRIES`.
+
+---
+
+## Limitaciones conocidas
+
+- **Cuotas de Free Tier:** TMDB y Google Books están acotados a `900` solicitudes diarias configurables (debajo del límite gratuito de `1000/día`), y el modelo gratuito en Groq está sujeto a límites de tokens por minuto (mitigado con `DEMO_FALLBACK_ON_RATE_LIMIT=true` en `docker-compose.demo.yml`).
+- **Sin persistencia de conversaciones:** por diseño del contrato de Fase 1 y 2, el historial vive únicamente en memoria durante la sesión del navegador.
+- **Bloqueadores de ventanas emergentes (*pop-up blockers*):** la apertura automática de pestañas hacia IMDb y Google Books depende de que el navegador permita la apertura iniciada por evento del chat; como respaldo, el widget también ofrece el enlace validado.
+- **Detalles de película sin ID numérico en búsqueda:** `search_movies` expone `imdb_id` (`tt...`), mientras que `get_movie_details` y `get_recommendations` requieren un identificador numérico de TMDB.
+
+---
+
+## Dependencias principales
+
+- [Bun](https://bun.sh/) — Runtime TypeScript, workspaces, bundler y runner de pruebas.
+- [Elysia](https://elysiajs.com/) + [TypeBox](https://github.com/sinclairzx81/typebox) — Servidor HTTP/WebSocket y validación estricta de contratos.
+- [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk) — Transporte Streamable HTTP para `tmdb-mcp` y `books-mcp`.
+- [Vue 3](https://vuejs.org/) + [Vite](https://vitejs.dev/) — Interfaz del widget embebible (`defineCustomElement`) y landing Mook.
+- [marked](https://marked.js.org/) + [DOMPurify](https://github.com/cure53/DOMPurify) — Renderizado de Markdown y sanitización XSS.
+- [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) y [Promptfoo](https://www.promptfoo.dev/) — Pruebas unitarias, E2E y evaluación de seguridad/funcionalidad.
+
+---
+
+## Autores
+
+**Marcelo Detlefsen** - 24554<br>
+**Julían Divas** - 24687<br>
+**Luis Angel Girón** - 24753<br>
+*Universidad del Valle de Guatemala*<br>
+*CC3116 — AI Engineering & Creativity*
