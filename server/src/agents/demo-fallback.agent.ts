@@ -200,12 +200,14 @@ export class DemoFallbackAgent implements AgentPort {
   ): Promise<IncomingMessage[]> {
     try {
       const events = await this.primary.respond(message, context);
-      const hitRateLimit = events.some(
+      const shouldFallback = events.some(
         (event) =>
           event.type === "error" &&
-          (event.error.code === "RATE_LIMITED" || event.error.code === "AGENT_RATE_LIMIT"),
+          (event.error.code === "RATE_LIMITED" ||
+            event.error.code === "AGENT_RATE_LIMIT" ||
+            event.error.code === "UPSTREAM_ERROR"),
       );
-      if (!hitRateLimit) {
+      if (!shouldFallback) {
         return events;
       }
     } catch (error) {
