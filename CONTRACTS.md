@@ -137,8 +137,10 @@ interface AGIChatConfig {
   containerId: string;       // id del elemento HTML donde se monta el widget
   apiUrl: string;            // URL del WebSocket (mock hoy, agente real en fase 2)
   conversationId?: string;   // opcional, se genera uno si no se provee
+  assistantName?: string;    // nombre visible de la asistente (default: "Selma")
+  mode?: "floating" | "docked"; // modo de presentación (default: "floating")
   theme?: {
-    primaryColor?: string;
+    primaryColor?: string;   // color de acento (default: "#ff4a1c")
     fontFamily?: string;
   };
 }

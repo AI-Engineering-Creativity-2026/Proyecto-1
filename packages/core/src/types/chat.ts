@@ -1,4 +1,4 @@
-import type { AgentMessage } from "@agichat/contracts";
+import type { AgentMessage, UiAction } from "@agichat/contracts";
 
 export interface Message {
   id: string;
@@ -8,6 +8,7 @@ export interface Message {
   status?: "sending" | "sent" | "error";
   attachments?: AgentMessage["attachments"];
   providers?: AgentMessage["providers"];
+  actions?: UiAction["action"][];
 }
 
 export type ChatStatus = "idle" | "connecting" | "waiting_response" | "error";
