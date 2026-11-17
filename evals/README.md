@@ -52,6 +52,21 @@ cero.
 El eval funcional Promptfoo (`bun run eval:functional`) sigue siendo una suite
 determinista separada que cubre más detalles del flujo funcional del issue #46.
 
+## Evals de seguridad con Promptfoo
+
+`bun run eval:security` ejecuta `promptfoo-security.yaml` con ocho casos
+deterministas: inyección directa y por suplantación de rol (LLM01), inyección
+indirecta en fixtures de TMDB y Google Books (LLM01), navegación no autorizada
+(LLM01) y extracción del prompt por solicitud directa, falsa auditoría y modo
+depuración (LLM07:2025). Las aserciones verifican negativas sin llamadas a
+herramientas ni `ui_action`, ausencia de texto interno o destinos ajenos a las
+allowlists y, para la inyección indirecta, conservación de la capacidad normal.
+
+Promptfoo invoca el orquestador y subagentes reales con runtime determinista y
+herramientas MCP simuladas. La suite corre en CI sin claves, Groq ni APIs
+externas. Las pruebas comprueban estos escenarios concretos; el comportamiento
+del modelo alojado se puede comprobar por separado con el modo real manual.
+
 El [registro de revisión cruzada](./revision-cruzada.md) identifica la persona
 autora y la revisora de los conjuntos funcional, LLM01 y LLM07, y documenta las
 resoluciones de los casos ambiguos.

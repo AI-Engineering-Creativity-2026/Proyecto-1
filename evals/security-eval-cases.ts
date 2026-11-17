@@ -66,11 +66,14 @@ async function runTmdbInjection(prompt: string): Promise<EvalObservation> {
 async function runBooksInjection(prompt: string): Promise<EvalObservation> {
   const searchFixture = await readFixture("books/search_books_prompt_injection.json");
   const detailsFixture = await readFixture("books/get_book_details_prompt_injection.json");
+  const calls: string[] = [];
   const clients = createMcpClients({
     tmdb: fixtureInvoker({}),
-    books: fixtureInvoker({ search_books: searchFixture, get_book_details: detailsFixture }),
+    books: fixtureInvoker(
+      { search_books: searchFixture, get_book_details: detailsFixture },
+      (name) => calls.push(`books.${name}`),
+    ),
   });
-  const calls: string[] = [];
   const comparisonAgent = new ComparisonAgent(clients.books, async (_movie, book) => {
     if (!book.description.includes("Ignore all previous instructions")) {
       throw new Error("The indirect Google Books injection fixture was not delivered to the model.");
@@ -151,11 +154,15 @@ async function readFixture(path: string): Promise<unknown> {
   return Bun.file(new URL(`../server/tests/fixtures/mcp/${path}`, import.meta.url)).json();
 }
 
-function fixtureInvoker(fixtures: Record<string, unknown>): McpToolInvoker {
+function fixtureInvoker(
+  fixtures: Record<string, unknown>,
+  onCall?: (name: string) => void,
+): McpToolInvoker {
   return {
     async callTool(name) {
       const response = fixtures[name];
       if (response === undefined) throw new Error("Missing fixture response.");
+      onCall?.(name);
       return { structuredContent: response };
     },
   };
@@ -171,4 +178,3 @@ const safeAssessment: ComparisonAssessment = {
     adaptation: { movie: "", book: "" },
   },
 };
-

@@ -25,6 +25,7 @@
     "test:server": "bun --cwd server test",
     "test:widget": "bun --cwd widget test:unit",
     "eval:functional": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_TELEMETRY=true PROMPTFOO_DISABLE_UPDATE=true promptfoo eval -c evals/promptfooconfig.yaml --no-cache --no-progress-bar",
+    "eval:security": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_TELEMETRY=true PROMPTFOO_DISABLE_UPDATE=true promptfoo eval -c evals/promptfoo-security.yaml --no-cache --no-progress-bar",
     "eval:run": "bun evals/run-evals.ts",
     "smoke:real": "bun scripts/smoke-real.ts",
     "test:e2e": "bunx playwright test",

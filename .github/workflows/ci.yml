@@ -65,6 +65,9 @@ jobs:
       - name: Evals funcionales del agente sin servicios externos
         run: bun run eval:functional
 
+      - name: Evals OWASP LLM01 y LLM07 sin servicios externos
+        run: bun run eval:security
+
       - name: Build
         run: bun run build
 

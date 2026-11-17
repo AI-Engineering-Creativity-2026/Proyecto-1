@@ -75,6 +75,7 @@ bun run test:coverage    # Pruebas Bun + Vitest + verificación de umbral >= 80%
 bun run test:mcp         # Pruebas de servidores y clientes MCP sin red externa
 bun run eval:run         # Suite de evals funcionales y OWASP (LLM01, LLM07) en modo fake
 bun run eval:functional  # Evals funcionales con Promptfoo
+bun run eval:security    # Evals OWASP LLM01 y LLM07 con Promptfoo
 bun run test:e2e         # Pruebas end-to-end y accesibilidad con Playwright
 ```
 
@@ -122,6 +123,7 @@ Más detalle en [`server/README.md`](server/README.md) y [`evals/README.md`](eva
   - *Indirecta:* todo texto proveniente de TMDB o Google Books se marca y procesa como dato no confiable (nunca como instrucción ejecutable), verificado con pruebas dedicadas en [`server/tests/llm01-indirect-injection.test.ts`](server/tests/llm01-indirect-injection.test.ts).
 - **LLM07 — System Prompt Leakage:** rechaza peticiones de ingeniería social (*admin audit*, *debug*, extracción de prompt/herramientas/claves) y valida que ninguna salida ni evento WebSocket filtre cadenas de configuración o secretos.
 - **Suite de Evals ([`evals/report.md`](evals/report.md)):** `11` casos automatizados (`movie-recommendation`, `movie-book-comparison`, `out-of-scope-refusal`, `prompt-extraction-social-engineering`, `llm01-*` y `llm07-*`) ejecutados determinísticamente en CI (`11 aprobados, 0 fallidos`).
+- **Promptfoo de seguridad:** [`evals/promptfoo-security.yaml`](evals/promptfoo-security.yaml) añade ocho casos LLM01 y LLM07 con aserciones sobre rechazos, filtraciones, uso de herramientas y destinos de `ui_action`; se ejecuta con `bun run eval:security` en CI.
 
 ### Endpoints HTTP y protocolo WebSocket
 
