@@ -46,10 +46,11 @@ onUnmounted(() => {
         <a
           href="#/"
           class="brand-wordmark"
+          aria-label="Mook, volver al inicio"
           @click.prevent="$emit('navigateLanding')"
         >
           <SelmaClapperIcon />
-          <span>Selma</span>
+          <span>Mook</span>
         </a>
         <a
           href="#/"

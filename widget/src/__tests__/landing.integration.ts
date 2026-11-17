@@ -18,12 +18,13 @@ afterEach(() => {
 });
 
 describe("Landing, FilmCarousel and ChatPage routes", () => {
-  it("renders landing sections, 8+ films, TMDB & Google Books attributions, and zero Mook/21.04", () => {
+  it("renders landing sections, 8+ films, TMDB & Google Books attributions, Mook brand and zero 21.04", () => {
     const wrapper = mount(DemoRouter, {
       props: { apiUrl: "ws://mock.example/ws" },
     });
 
     const text = wrapper.text();
+    expect(text).toContain("Mook");
     expect(text).toContain("Selma");
     expect(text).toContain("Cómo funciona");
     expect(text).toContain("Películas");
@@ -33,7 +34,7 @@ describe("Landing, FilmCarousel and ChatPage routes", () => {
     expect(text).toContain("This product uses the TMDB API but is not endorsed or certified by TMDB.");
     expect(text).toContain("Powered by Google Books");
     expect(text).toContain("CC3116");
-    expect(text).not.toMatch(/mook|21\.04/i);
+    expect(text).not.toMatch(/21\.04/i);
     expect(wrapper.findAll(".film-slide").length).toBeGreaterThanOrEqual(8);
   });
 
@@ -112,10 +113,11 @@ describe("Landing, FilmCarousel and ChatPage routes", () => {
     await nextTick();
 
     expect(window.location.hash).toBe("#/chat");
+    expect(wrapper.text()).toContain("Mook");
     expect(wrapper.text()).toContain("¿Qué vemos esta noche?");
     expect(wrapper.text()).toContain("Volver al inicio");
     expect(wrapper.text()).toContain("Datos de películas por TMDB · Libros por Google Books");
-    expect(wrapper.text()).not.toMatch(/mook|21\.04/i);
+    expect(wrapper.text()).not.toMatch(/21\.04/i);
     expect(init).toHaveBeenCalledWith(
       expect.objectContaining({
         containerId: "selma-chat-dock",

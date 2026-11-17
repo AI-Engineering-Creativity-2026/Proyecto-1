@@ -13,9 +13,9 @@ const tmdbLogoUrl =
 <template>
   <div class="landing-page">
     <header class="landing-nav">
-      <a class="brand-wordmark" href="#/" aria-label="Selma, inicio">
+      <a class="brand-wordmark" href="#/" aria-label="Mook, inicio">
         <SelmaClapperIcon />
-        <span>Selma</span>
+        <span>Mook</span>
       </a>
       <nav class="landing-nav__links" aria-label="Navegación principal">
         <a href="#como-funciona">Cómo funciona</a>
@@ -31,24 +31,26 @@ const tmdbLogoUrl =
     </header>
 
     <main class="landing-main">
-      <section class="landing-hero" aria-labelledby="landing-hero-title">
-        <p class="landing-eyebrow">CINE Y LITERATURA</p>
-        <h1 id="landing-hero-title">Si te gustó la película, descubre el libro.</h1>
-        <p class="landing-hero__lead">
-          Selma recomienda películas según tus gustos, te muestra su póster y compara cada adaptación con su libro original para ayudarte a decidir si vale la pena verla.
-        </p>
-        <div class="landing-hero__actions">
-          <a
-            href="#/chat"
-            class="btn-primary"
-            @click.prevent="$emit('navigateChat')"
-          >
-            Hablar con Selma
-          </a>
-        </div>
-      </section>
+      <div class="landing-top-grid">
+        <section class="landing-hero" aria-labelledby="landing-hero-title">
+          <p class="landing-eyebrow">MOOK · CINE Y LITERATURA</p>
+          <h1 id="landing-hero-title">Si te gustó la película, descubre el libro.</h1>
+          <p class="landing-hero__lead">
+            Selma recomienda películas según tus gustos, te muestra su póster y compara cada adaptación con su libro original para ayudarte a decidir si vale la pena verla.
+          </p>
+          <div class="landing-hero__actions">
+            <a
+              href="#/chat"
+              class="btn-primary"
+              @click.prevent="$emit('navigateChat')"
+            >
+              Hablar con Selma
+            </a>
+          </div>
+        </section>
 
-      <FilmCarousel />
+        <FilmCarousel />
+      </div>
 
       <section id="como-funciona" class="landing-section" aria-labelledby="how-title">
         <p class="landing-eyebrow">CÓMO FUNCIONA</p>

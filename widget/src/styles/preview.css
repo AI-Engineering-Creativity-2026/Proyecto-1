@@ -124,13 +124,19 @@ body {
 .landing-main {
   display: flex;
   flex-direction: column;
-  gap: clamp(56px, 8vw, 96px);
-  padding: clamp(24px, 4vw, 48px) clamp(20px, 5vw, 72px) 72px;
+  gap: clamp(48px, 7vw, 84px);
+  padding: clamp(20px, 3vw, 40px) clamp(20px, 5vw, 72px) 72px;
+}
+
+.landing-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 52px);
 }
 
 .landing-hero {
-  max-width: 780px;
-  padding-top: clamp(16px, 4vh, 48px);
+  max-width: 680px;
 }
 
 .landing-hero h1 {
@@ -389,12 +395,13 @@ body {
 }
 
 .chat-page__hero-col {
-  flex: 1;
+  flex: 0 0 50%;
+  width: 50%;
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: clamp(20px, 3vw, 34px) clamp(20px, 5vw, 64px);
+  padding: clamp(20px, 3vw, 34px) clamp(20px, 4.5vw, 56px);
 }
 
 .chat-page__topbar {
@@ -471,8 +478,8 @@ body {
 }
 
 .chat-page__dock {
-  flex: 0 0 460px;
-  width: 460px;
+  flex: 0 0 50%;
+  width: 50%;
   height: 100dvh;
 }
 
@@ -483,8 +490,17 @@ button:focus-visible {
 }
 
 @media (max-width: 1023px) {
+  .landing-top-grid {
+    grid-template-columns: 1fr;
+  }
+
   .chat-page {
     flex-direction: column;
+  }
+
+  .chat-page__hero-col {
+    flex: none;
+    width: 100%;
   }
 
   .chat-page__dock {
