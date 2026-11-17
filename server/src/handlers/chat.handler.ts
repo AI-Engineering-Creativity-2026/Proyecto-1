@@ -1,5 +1,6 @@
 import type { IncomingMessage, OutgoingMessage } from "@agichat/contracts";
 import type { AgentPort } from "../agents";
+import { ConversationStore, type ConversationStoreOptions } from "./conversation-store";
 
 export type LatencyProvider = () => number;
 
@@ -10,6 +11,8 @@ export function randomLatency(): number {
 export interface ChatHandlerOptions {
   agentTimeoutMs?: number;
   now?: () => Date;
+  store?: ConversationStore;
+  storeOptions?: ConversationStoreOptions;
 }
 
 export interface ChatHandlerResult {
@@ -52,10 +55,13 @@ export function createChatHandler(
 ): ChatHandlerResult {
   const agentTimeoutMs = options.agentTimeoutMs ?? 30_000;
   const now = options.now ?? (() => new Date());
-  const history: IncomingMessage[] = [];
+  const store = options.store ?? new ConversationStore(options.storeOptions);
+  const historyByConversation = new Map<string, IncomingMessage[]>();
 
   return {
     onOutgoingMessage: async (message) => {
+      const history = historyByConversation.get(message.conversationId) ?? [];
+      const turns = store.getTurns(message.conversationId);
       let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
       const timeoutResponse = new Promise<IncomingMessage[]>((resolve) => {
         timeoutHandle = setTimeout(
@@ -73,6 +79,7 @@ export function createChatHandler(
         agent.respond(message, {
           conversationId: message.conversationId,
           history,
+          turns,
         }).catch((error: unknown) => {
           const code = errorCode(error);
           return [errorEvent(message.conversationId, code, errorMessage(code), now)];
@@ -82,7 +89,15 @@ export function createChatHandler(
         if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
       });
 
-      history.push(...response);
+      const agentMessages = response.filter((item) => item.type === "agent_message");
+      if (agentMessages.length > 0) {
+        store.appendTurn(message.conversationId, { role: "user", content: message.content });
+        for (const msg of agentMessages) {
+          store.appendTurn(message.conversationId, { role: "agent", content: msg.content });
+        }
+        const nextHistory = [...history, ...agentMessages].slice(-12);
+        historyByConversation.set(message.conversationId, nextHistory);
+      }
       return response;
     },
   };
