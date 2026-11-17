@@ -117,6 +117,7 @@ export class OrchestratorAgent implements AgentPort {
       let comparisonVerdict: ComparisonAssessment["verdict"] | undefined;
       let providerFailure: AgentFailureCode | undefined;
       let selectedFeatured: FeaturedItemsInput = {};
+      let selectFeaturedCalled = false;
       let lastToolContent = "";
       const runTools: OrchestratorTools = {
         ...createOrchestratorTools(
@@ -146,6 +147,7 @@ export class OrchestratorAgent implements AgentPort {
           },
         ),
         selectFeaturedItems: (input) => {
+          selectFeaturedCalled = true;
           selectedFeatured = input;
         },
       };
@@ -159,9 +161,19 @@ export class OrchestratorAgent implements AgentPort {
       }
       if (!generated) throw new Error("Empty orchestrator response.");
 
+      const explicitSelection =
+        selectFeaturedCalled ||
+        output.featuredImdbId !== undefined ||
+        output.featuredBookVolumeId !== undefined;
       const featuredImdbId = output.featuredImdbId ?? selectedFeatured.imdbId ?? null;
       const featuredBookVolumeId = output.featuredBookVolumeId ?? selectedFeatured.bookVolumeId ?? null;
-      const verifiedEvidence = verifyFeaturedEvidence(evidence, featuredImdbId, featuredBookVolumeId);
+      const verifiedEvidence = verifyFeaturedEvidence(
+        evidence,
+        featuredImdbId,
+        featuredBookVolumeId,
+        explicitSelection,
+        generated,
+      );
 
       const contentWithOffer = includesComparisonOffer(generated)
         ? generated
@@ -204,7 +216,11 @@ export class OrchestratorAgent implements AgentPort {
 }
 
 function providerFailureCode(error: unknown): AgentFailureCode | undefined {
-  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  if (typeof error !== "object" || error === null) return undefined;
+  if ("statusCode" in error && (error as { statusCode?: unknown }).statusCode === 429) {
+    return "RATE_LIMITED";
+  }
+  if (!("code" in error)) return undefined;
   return error.code === "RATE_LIMITED" || error.code === "UPSTREAM_ERROR"
     ? error.code
     : undefined;
@@ -319,7 +335,7 @@ export function createOrchestratorAgent(
       prompt,
       tools: createOrchestratorSdkTools(agentTools),
       stopWhen: stepCountIs(5),
-      maxOutputTokens: 1024,
+      maxOutputTokens: 1200,
       maxRetries: 0,
       telemetry: { isEnabled: false },
     });
@@ -382,14 +398,37 @@ function verifyFeaturedEvidence(
   evidence: AgentPresentationEvidence,
   featuredImdbId: string | null,
   featuredBookVolumeId: string | null,
+  explicitSelection: boolean,
+  generatedContent: string,
 ): AgentPresentationEvidence {
-  const movies = featuredImdbId
-    ? evidence.movies.filter((item) => item.movie.imdb_id === featuredImdbId).slice(0, 1)
-    : [];
-  const book = featuredBookVolumeId && evidence.book?.volumeId === featuredBookVolumeId
-    ? evidence.book
-    : null;
-  return { movies, book };
+  if (explicitSelection) {
+    const movies = featuredImdbId
+      ? evidence.movies.filter((item) => item.movie.imdb_id === featuredImdbId).slice(0, 1)
+      : [];
+    const book = featuredBookVolumeId && evidence.book?.volumeId === featuredBookVolumeId
+      ? evidence.book
+      : null;
+    return { movies, book };
+  }
+
+  const normalizedContent = generatedContent
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (/\b(no encontre|no se encontraron|no pude verificar|no esta basada)\b/i.test(normalizedContent)) {
+    return { movies: [], book: null };
+  }
+
+  const prioritized = [
+    ...evidence.movies.filter((item) => item.source === "discover_movies"),
+    ...evidence.movies.filter((item) => item.source === "get_recommendations"),
+    ...evidence.movies.filter((item) => item.source === "get_movie_details"),
+    ...evidence.movies.filter((item) => item.source === "search_movies"),
+  ];
+  const topMovie = prioritized.find((item) => item.movie.imdb_id !== null || item.movie.poster_url !== null);
+  return {
+    movies: topMovie ? [topMovie] : [],
+    book: evidence.book ?? null,
+  };
 }
 
 function extractPriorTurns(context: ConversationContext): Array<{ role: "user" | "agent"; content: string }> {

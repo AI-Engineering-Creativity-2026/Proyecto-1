@@ -118,6 +118,9 @@ export class MovieAgent {
       if (error instanceof McpClientError) {
         throw new MovieAgentError(error.code, safeProviderMessage(error.code));
       }
+      if (typeof error === "object" && error !== null && "statusCode" in error && (error as { statusCode?: unknown }).statusCode === 429) {
+        throw new MovieAgentError("RATE_LIMITED", safeProviderMessage("RATE_LIMITED"));
+      }
       throw new MovieAgentError(
         "AGENT_ERROR",
         "No se pudo completar la búsqueda de películas. Intenta de nuevo.",
@@ -177,8 +180,8 @@ export function createMovieAgent(
       instructions: MOVIE_AGENT_INSTRUCTIONS,
       prompt,
       tools: createMovieSdkTools(tools),
-      stopWhen: stepCountIs(5),
-      maxOutputTokens: 1024,
+      stopWhen: stepCountIs(4),
+      maxOutputTokens: 700,
       maxRetries: 0,
       telemetry: { isEnabled: false },
     });

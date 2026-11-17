@@ -140,7 +140,7 @@ describe("OrchestratorAgent", () => {
 
     const response = await agent.respond({ ...message, content: "Compara The Matrix con su libro." }, context);
 
-    expect(response.at(-1)).toMatchObject({
+    expect(response.find((item) => item.type === "agent_message")).toMatchObject({
       type: "agent_message",
       content: expect.stringContaining("**Veredicto: No vale la pena verla.**"),
     });
@@ -313,5 +313,37 @@ describe("OrchestratorAgent", () => {
       type: "agent_message",
       content: expect.stringContaining("Solo puedo ayudar"),
     });
+  });
+
+  it("promotes top verified tool evidence when select_featured_items is omitted on positive answers", async () => {
+    const tools = createOrchestratorTools(
+      async () => ({ content: "Te recomiendo The Matrix.", movies: [movieEvidence] }),
+      async () => ({ content: "unused" }),
+    );
+    const agent = new OrchestratorAgent(tools, async (prompt, availableTools) => {
+      await availableTools.recommendMovies({ request: prompt });
+      return "Te recomiendo The Matrix.";
+    }, fixedNow);
+
+    const response = await agent.respond(message, context);
+    expect(response.some((item) => item.type === "ui_action" && item.action.source === "imdb")).toBe(true);
+    const agentMsg = response.find((item) => item.type === "agent_message");
+    expect(agentMsg?.type === "agent_message" ? agentMsg.attachments : []).toHaveLength(1);
+  });
+
+  it("omits attachments and ui_action when select_featured_items is omitted and no results were found", async () => {
+    const tools = createOrchestratorTools(
+      async () => ({ content: "No encontré películas.", movies: [movieEvidence] }),
+      async () => ({ content: "unused" }),
+    );
+    const agent = new OrchestratorAgent(tools, async (prompt, availableTools) => {
+      await availableTools.recommendMovies({ request: prompt });
+      return "No encontré películas para esa búsqueda.";
+    }, fixedNow);
+
+    const response = await agent.respond(message, context);
+    expect(response.some((item) => item.type === "ui_action")).toBe(false);
+    const agentMsg = response.find((item) => item.type === "agent_message");
+    expect(agentMsg?.type === "agent_message" ? agentMsg.attachments : undefined).toBeUndefined();
   });
 });

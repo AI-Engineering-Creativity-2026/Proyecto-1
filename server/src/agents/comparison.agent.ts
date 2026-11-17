@@ -187,6 +187,9 @@ export class ComparisonAgent {
       if (error instanceof McpClientError) {
         throw new ComparisonAgentError(error.code, safeProviderMessage(error.code));
       }
+      if (typeof error === "object" && error !== null && "statusCode" in error && (error as { statusCode?: unknown }).statusCode === 429) {
+        throw new ComparisonAgentError("RATE_LIMITED", safeProviderMessage("RATE_LIMITED"));
+      }
       throw new ComparisonAgentError("AGENT_ERROR", SAFE_ERROR_MESSAGE);
     }
   }
@@ -227,7 +230,7 @@ export function createComparisonAgent(
       },
       toolChoice: { type: "tool", toolName: "identify_source_book" },
       stopWhen: stepCountIs(1),
-      maxOutputTokens: 256,
+      maxOutputTokens: 1200,
       maxRetries: 0,
       telemetry: { isEnabled: false },
     });
@@ -253,7 +256,7 @@ export function createComparisonAgent(
       },
       toolChoice: { type: "tool", toolName: "submit_comparison" },
       stopWhen: stepCountIs(1),
-      maxOutputTokens: 768,
+      maxOutputTokens: 1200,
       maxRetries: 0,
       telemetry: { isEnabled: false },
     });
