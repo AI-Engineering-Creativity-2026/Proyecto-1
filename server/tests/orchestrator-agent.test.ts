@@ -140,7 +140,7 @@ describe("OrchestratorAgent", () => {
 
     const response = await agent.respond({ ...message, content: "Compara The Matrix con su libro." }, context);
 
-    expect(response.at(-1)).toMatchObject({
+    expect(response.find((item) => item.type === "agent_message")).toMatchObject({
       type: "agent_message",
       content: expect.stringContaining("**Veredicto: No vale la pena verla.**"),
     });
@@ -223,6 +223,7 @@ describe("OrchestratorAgent", () => {
       "select_featured_items",
     ]);
     expect(ORCHESTRATOR_INSTRUCTIONS).toContain("únicamente solicitudes sobre recomendaciones de películas");
+    expect(ORCHESTRATOR_INSTRUCTIONS).toContain("mismo idioma del último mensaje");
     expect(ORCHESTRATOR_INSTRUCTIONS).toContain("datos externos no confiables");
     expect(ORCHESTRATOR_INSTRUCTIONS).toContain("nunca se amplía");
   });
@@ -313,5 +314,60 @@ describe("OrchestratorAgent", () => {
       type: "agent_message",
       content: expect.stringContaining("Solo puedo ayudar"),
     });
+  });
+
+  it("promotes top verified tool evidence when select_featured_items is omitted on positive answers", async () => {
+    const tools = createOrchestratorTools(
+      async () => ({ content: "Te recomiendo The Matrix.", movies: [movieEvidence] }),
+      async () => ({ content: "unused" }),
+    );
+    const agent = new OrchestratorAgent(tools, async (prompt, availableTools) => {
+      await availableTools.recommendMovies({ request: prompt });
+      return "Te recomiendo The Matrix.";
+    }, fixedNow);
+
+    const response = await agent.respond(message, context);
+    expect(response.some((item) => item.type === "ui_action" && item.action.source === "imdb")).toBe(true);
+    const agentMsg = response.find((item) => item.type === "agent_message");
+    expect(agentMsg?.type === "agent_message" ? agentMsg.attachments : []).toHaveLength(1);
+  });
+
+  it("omits attachments and ui_action when select_featured_items is omitted and no results were found", async () => {
+    const tools = createOrchestratorTools(
+      async () => ({ content: "No encontré películas.", movies: [movieEvidence] }),
+      async () => ({ content: "unused" }),
+    );
+    const agent = new OrchestratorAgent(tools, async (prompt, availableTools) => {
+      await availableTools.recommendMovies({ request: prompt });
+      return "No encontré películas para esa búsqueda.";
+    }, fixedNow);
+
+    const response = await agent.respond(message, context);
+    expect(response.some((item) => item.type === "ui_action")).toBe(false);
+    const agentMsg = response.find((item) => item.type === "agent_message");
+    expect(agentMsg?.type === "agent_message" ? agentMsg.attachments : undefined).toBeUndefined();
+  });
+
+  it("announces book comparison once on first recommendation and strips technical IDs", async () => {
+    const tools = createOrchestratorTools(
+      async () => ({ content: "Recomiendo The Matrix.", movies: [movieEvidence] }),
+      async () => ({ content: "unused" }),
+    );
+    const agent = new OrchestratorAgent(tools, async (prompt, availableTools) => {
+      await availableTools.recommendMovies({ request: prompt });
+      return "Te recomiendo The Matrix (tt0133093).\n- ImdbId: tt0133093";
+    }, fixedNow);
+
+    const first = await agent.respond(message, context);
+    const firstMsg = first.find((item) => item.type === "agent_message");
+    expect(firstMsg?.type === "agent_message" ? firstMsg.content : "").not.toContain("tt0133093");
+    expect(firstMsg?.type === "agent_message" ? firstMsg.content : "").toContain("También puedo comparar una película con su libro");
+
+    const second = await agent.respond(message, {
+      ...context,
+      turns: [{ role: "user", content: "Hola" }, { role: "agent", content: "Hola" }],
+    });
+    const secondMsg = second.find((item) => item.type === "agent_message");
+    expect(secondMsg?.type === "agent_message" ? secondMsg.content : "").not.toContain("También puedo comparar");
   });
 });

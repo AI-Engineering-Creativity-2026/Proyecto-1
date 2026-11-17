@@ -354,6 +354,19 @@ export function createChatSession(
 
     if (parsed.type === "ui_action") {
       if (isAllowedUiAction(parsed.action)) {
+        const lastIndex = state.value.messages.length - 1;
+        const lastMessage = lastIndex >= 0 ? state.value.messages[lastIndex] : undefined;
+        if (lastMessage && lastMessage.role === "agent") {
+          const existingActions = lastMessage.actions ?? [];
+          if (!existingActions.some((item) => item.url === parsed.action.url)) {
+            const nextMessages = [...state.value.messages];
+            nextMessages[lastIndex] = {
+              ...lastMessage,
+              actions: [...existingActions, parsed.action],
+            };
+            patchState({ messages: nextMessages });
+          }
+        }
         try {
           options.onAction?.(parsed.action);
         } catch {

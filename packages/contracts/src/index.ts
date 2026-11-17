@@ -82,6 +82,8 @@ export const UiActionSchema = Type.Object({
     url: Type.String({ format: "uri" }),
     source: Type.Union([Type.Literal("imdb"), Type.Literal("google_books")]),
     reason: Type.Optional(Type.String()),
+    title: Type.Optional(Type.String()),
+    year: Type.Optional(Type.Union([Type.Integer(), Type.Null()])),
   }),
 });
 

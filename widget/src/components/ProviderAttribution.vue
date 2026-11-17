@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Message } from "@agichat/core";
+import { WIDGET_STRINGS } from "../i18n/strings";
 
 const props = defineProps<{
   providers: Message["providers"];
@@ -18,7 +19,7 @@ const googleBooksLogoUrl = "https://books.google.com/googlebooks/images/poweredb
   <section
     v-if="uniqueProviders().length > 0"
     class="provider-attributions"
-    aria-label="Credits"
+    :aria-label="WIDGET_STRINGS.creditsAriaLabel"
   >
     <div
       v-for="provider in uniqueProviders()"
@@ -36,22 +37,22 @@ const googleBooksLogoUrl = "https://books.google.com/googlebooks/images/poweredb
           <img
             :src="tmdbLogoUrl"
             alt="The Movie Database (TMDB) logo"
-            width="42"
-            height="30"
+            width="28"
+            height="20"
             loading="lazy"
             decoding="async"
             referrerpolicy="no-referrer"
           >
         </a>
-        <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+        <p>{{ WIDGET_STRINGS.tmdbAttributionText }}</p>
       </template>
 
       <template v-else-if="provider === 'google_books'">
         <img
           :src="googleBooksLogoUrl"
           alt="Powered by Google"
-          width="120"
-          height="24"
+          width="88"
+          height="18"
           loading="lazy"
           decoding="async"
           referrerpolicy="no-referrer"
@@ -61,7 +62,7 @@ const googleBooksLogoUrl = "https://books.google.com/googlebooks/images/poweredb
           target="_blank"
           rel="noopener noreferrer"
         >
-          Google Books
+          {{ WIDGET_STRINGS.googleBooksLabel }}
         </a>
       </template>
     </div>
