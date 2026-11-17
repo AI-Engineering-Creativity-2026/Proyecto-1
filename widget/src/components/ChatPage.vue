@@ -15,6 +15,12 @@ const chips = [
   "Recomiéndame ciencia ficción",
   "Compara Blade Runner con su libro",
   "¿Vale la pena ver Dune?",
+  "Recomiéndame un thriller psicológico",
+  "Compara El Resplandor con la novela de Stephen King",
+  "¿Es fiel Fight Club al libro de Chuck Palahniuk?",
+  "Sugiere una película de fantasía épica con póster",
+  "Compara No Country for Old Men con su novela",
+  "Quiero ver algo de misterio y suspenso",
 ] as const;
 
 function sendChip(text: string): void {

@@ -124,7 +124,7 @@ describe("Landing, FilmCarousel and ChatPage routes", () => {
     window.addEventListener("agichat:send", listener);
 
     const chips = wrapper.findAll(".hero-chip");
-    expect(chips).toHaveLength(3);
+    expect(chips.length).toBeGreaterThanOrEqual(8);
     await chips[0]!.trigger("click");
     await chips[1]!.trigger("click");
     await chips[2]!.trigger("click");
