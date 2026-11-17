@@ -13,6 +13,7 @@ import { createConfiguredGroqModel, type AgentEnvironment } from "./groq.agent";
 import { createMovieAgent } from "./movie.agent";
 import type { MovieAgentEvidence } from "./movie.agent";
 import { MockAgent } from "./mock.agent";
+import { DemoFallbackAgent } from "./demo-fallback.agent";
 import { createAgentOutputMessages, type AgentPresentationEvidence } from "./agent-output";
 import { isDirectPromptInjection, UNTRUSTED_CONTENT_POLICY } from "./prompt-security";
 import type { AgentPort, ConversationContext } from "./agent.port";
@@ -397,7 +398,13 @@ export function createConfiguredServerAgent(
 ): AgentPort {
   const mode = resolveAgentMode(environment);
   if (mode === "mock") return new MockAgent();
-  return createConfiguredOrchestratorAgent(environment);
+  const orchestrator = createConfiguredOrchestratorAgent(environment);
+  if (environment.DEMO_FALLBACK_ON_RATE_LIMIT === "true") {
+    return new DemoFallbackAgent(orchestrator, () =>
+      connectMcpClients(readMcpClientConfig(environment)),
+    );
+  }
+  return orchestrator;
 }
 
 function verifyFeaturedEvidence(
