@@ -54,7 +54,9 @@ describe("OrchestratorAgent", () => {
     });
     const runtime: OrchestratorRuntime = async (prompt, availableTools) => {
       expect(prompt).toBe(message.content);
-      return (await availableTools.recommendMovies({ request: prompt })).content;
+      const res = await availableTools.recommendMovies({ request: prompt });
+      availableTools.selectFeaturedItems?.({ imdbId: "tt0133093" });
+      return res.content;
     };
     const agent = new OrchestratorAgent(tools, runtime, fixedNow);
 
@@ -67,13 +69,6 @@ describe("OrchestratorAgent", () => {
       timestamp: "2026-11-14T10:00:01.000Z",
     });
     expect(response[1]).toMatchObject({
-      type: "ui_action",
-      action: {
-        source: "imdb",
-        url: "https://www.imdb.com/title/tt0133093/",
-      },
-    });
-    expect(response[2]).toMatchObject({
       type: "agent_message",
       content: "Recomiendo una película desde TMDB.\n\nTambién puedo comparar una película con su libro si quieres.",
       attachments: [{
@@ -81,6 +76,13 @@ describe("OrchestratorAgent", () => {
         url: "https://image.tmdb.org/t/p/w500/matrix.jpg",
       }],
       providers: ["tmdb"],
+    });
+    expect(response[2]).toMatchObject({
+      type: "ui_action",
+      action: {
+        source: "imdb",
+        url: "https://www.imdb.com/title/tt0133093/",
+      },
     });
   });
 
@@ -94,12 +96,15 @@ describe("OrchestratorAgent", () => {
         verdict: "worth_watching",
       };
     });
-    const agent = new OrchestratorAgent(tools, async (_prompt, availableTools) =>
-      (await availableTools.compareMovieWithBook({
+    const agent = new OrchestratorAgent(tools, async (_prompt, availableTools) => {
+      const res = await availableTools.compareMovieWithBook({
         title: "The Matrix",
         overview: "A hacker discovers a simulated reality.",
         year: 1999,
-      })).content, fixedNow);
+      });
+      availableTools.selectFeaturedItems?.({ bookVolumeId: "volume-1" });
+      return res.content;
+    }, fixedNow);
     const comparisonMessage = { ...message, content: "Compara The Matrix con su libro." };
 
     const response = await agent.respond(comparisonMessage, context);
@@ -110,16 +115,16 @@ describe("OrchestratorAgent", () => {
       year: 1999,
     }]);
     expect(response[1]).toMatchObject({
+      type: "agent_message",
+      content: "También puedo comparar otra película con su libro.\n\n**Veredicto: Vale la pena verla.**",
+      providers: ["google_books"],
+    });
+    expect(response[2]).toMatchObject({
       type: "ui_action",
       action: {
         source: "google_books",
         url: "https://books.google.com/books?id=volume-1",
       },
-    });
-    expect(response[2]).toMatchObject({
-      type: "agent_message",
-      content: "También puedo comparar otra película con su libro.\n\n**Veredicto: Vale la pena verla.**",
-      providers: ["google_books"],
     });
   });
 
@@ -215,10 +220,28 @@ describe("OrchestratorAgent", () => {
     expect(Object.keys(tools)).toEqual([
       "recommend_movies",
       "compare_movie_with_book",
+      "select_featured_items",
     ]);
     expect(ORCHESTRATOR_INSTRUCTIONS).toContain("únicamente solicitudes sobre recomendaciones de películas");
     expect(ORCHESTRATOR_INSTRUCTIONS).toContain("datos externos no confiables");
     expect(ORCHESTRATOR_INSTRUCTIONS).toContain("nunca se amplía");
+  });
+
+  it("omits ui_action and attachments when no featured item is verified in the turn", async () => {
+    const tools = createOrchestratorTools(
+      async () => ({ content: "No encontré películas.", movies: [movieEvidence] }),
+      async () => ({ content: "unused" }),
+    );
+    const agent = new OrchestratorAgent(tools, async (prompt, availableTools) => {
+      await availableTools.recommendMovies({ request: prompt });
+      availableTools.selectFeaturedItems?.({ imdbId: "tt9999999" });
+      return "No encontré resultados útiles.";
+    }, fixedNow);
+
+    const response = await agent.respond(message, context);
+    expect(response.some((item) => item.type === "ui_action")).toBe(false);
+    const agentMsg = response.find((item) => item.type === "agent_message");
+    expect(agentMsg?.type === "agent_message" ? agentMsg.attachments : undefined).toBeUndefined();
   });
 
   it("keeps the mock as the default and selects a lazily connected orchestrator in Groq mode", () => {

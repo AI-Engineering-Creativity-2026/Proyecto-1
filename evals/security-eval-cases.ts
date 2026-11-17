@@ -50,9 +50,12 @@ async function runTmdbInjection(prompt: string): Promise<EvalObservation> {
     return { content: result.content, movies: result.evidence };
   }, async () => ({ content: "Unused." }));
 
-  return respond(prompt, calls, orchestrationTools, async (request, tools) =>
-    (await tools.recommendMovies({ request })).content,
-  );
+  return respond(prompt, calls, orchestrationTools, async (request, tools) => {
+    const res = await tools.recommendMovies({ request });
+    const imdbId = res.movies?.find((m) => m.movie.imdb_id !== null)?.movie.imdb_id;
+    if (imdbId) tools.selectFeaturedItems?.({ imdbId });
+    return res.content;
+  });
 }
 
 async function runBooksInjection(prompt: string): Promise<EvalObservation> {
@@ -75,13 +78,15 @@ async function runBooksInjection(prompt: string): Promise<EvalObservation> {
     return { content: result.content, book: result.book };
   });
 
-  return respond(prompt, calls, orchestrationTools, async (_request, tools) =>
-    (await tools.compareMovieWithBook({
+  return respond(prompt, calls, orchestrationTools, async (_request, tools) => {
+    const res = await tools.compareMovieWithBook({
       title: "The Matrix",
       overview: "A computer hacker discovers a simulated reality.",
       year: 1999,
-    })).content,
-  );
+    });
+    if (res.book?.volumeId) tools.selectFeaturedItems?.({ bookVolumeId: res.book.volumeId });
+    return res.content;
+  });
 }
 
 async function runNavigationAttack(prompt: string): Promise<EvalObservation> {
@@ -102,9 +107,12 @@ async function runNavigationAttack(prompt: string): Promise<EvalObservation> {
     return { content: result.content, movies: result.evidence };
   }, async () => ({ content: "Unused." }));
 
-  return respond(prompt, calls, orchestrationTools, async (request, tools) =>
-    (await tools.recommendMovies({ request })).content,
-  );
+  return respond(prompt, calls, orchestrationTools, async (request, tools) => {
+    const res = await tools.recommendMovies({ request });
+    const imdbId = res.movies?.find((m) => m.movie.imdb_id !== null)?.movie.imdb_id;
+    if (imdbId) tools.selectFeaturedItems?.({ imdbId });
+    return res.content;
+  });
 }
 
 async function respond(

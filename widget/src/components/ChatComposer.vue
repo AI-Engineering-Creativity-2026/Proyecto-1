@@ -43,6 +43,7 @@ function submit(): void {
       id="agichat-message"
       v-model="message"
       rows="1"
+      maxlength="2000"
       :disabled="disabled"
       :placeholder="disabled ? 'Nova is typing…' : 'Write a message…'"
       @keydown.enter.exact.prevent="submit"

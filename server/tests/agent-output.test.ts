@@ -34,18 +34,18 @@ describe("agent output presentation", () => {
 
     expect(messages).toHaveLength(4);
     expect(messages[1]).toMatchObject({
-      type: "ui_action",
-      action: { source: "imdb", url: "https://www.imdb.com/title/tt0133093/" },
-    });
-    expect(messages[2]).toMatchObject({
-      type: "ui_action",
-      action: { source: "google_books", url: "https://books.google.com/books?id=book_id-1" },
-    });
-    expect(messages[3]).toMatchObject({
       type: "agent_message",
       content: "Recommendation",
       providers: ["tmdb", "google_books"],
       attachments: [{ type: "poster", url: "https://image.tmdb.org/t/p/w500/matrix.jpg" }],
+    });
+    expect(messages[2]).toMatchObject({
+      type: "ui_action",
+      action: { source: "imdb", url: "https://www.imdb.com/title/tt0133093/" },
+    });
+    expect(messages[3]).toMatchObject({
+      type: "ui_action",
+      action: { source: "google_books", url: "https://books.google.com/books?id=book_id-1" },
     });
   });
 

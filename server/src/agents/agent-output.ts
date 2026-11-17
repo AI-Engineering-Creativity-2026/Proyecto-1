@@ -52,8 +52,8 @@ export function createAgentOutputMessages(
       conversationId,
       timestamp: now().toISOString(),
     },
-    ...actions,
     agentMessage,
+    ...actions,
   ];
 }
 
