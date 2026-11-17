@@ -6,7 +6,6 @@ import type { ExternalLinkAction } from "../utils/external-links";
 import AgentAvatar from "./AgentAvatar.vue";
 import ChatComposer from "./ChatComposer.vue";
 import MessageBubble from "./MessageBubble.vue";
-import SuggestionButton from "./SuggestionButton.vue";
 import TypingIndicator from "./TypingIndicator.vue";
 
 const props = withDefaults(
@@ -37,11 +36,6 @@ const hasMessages = computed(() => props.state.messages.length > 0);
 const externalLinkName = computed(() =>
   props.externalAction?.source === "imdb" ? "IMDb" : "Google Books",
 );
-const suggestions = [
-  "Recomiéndame ciencia ficción",
-  "Compara Blade Runner con su libro",
-  "¿Vale la pena ver Dune?",
-] as const;
 
 function submitMessage(message: string): void {
   composerValue.value = "";
@@ -83,23 +77,23 @@ function retryMessage(): void {
 
     <div class="chat-body" aria-live="polite">
       <div v-if="!hasMessages && state.status !== 'error'" class="empty-state">
-        <AgentAvatar :label="assistantName" size="large" />
-        <div class="empty-state__copy">
-          <p class="eyebrow">TU GUÍA DE CINE Y LIBROS</p>
-          <h3>¡Hola, soy {{ assistantName }}!</h3>
-          <p>Pídeme una recomendación de película o compárala con el libro que la inspiró.</p>
-        </div>
-        <div
-          class="suggestions"
-          role="group"
-          aria-label="Preguntas sugeridas sobre películas y libros"
-        >
-          <SuggestionButton
-            v-for="suggestion in suggestions"
-            :key="suggestion"
-            :label="suggestion"
-            @select="submitMessage"
-          />
+        <div class="welcome-ticket">
+          <div class="welcome-ticket__head">
+            <AgentAvatar :label="assistantName" size="large" />
+            <span class="welcome-ticket__badge">FUNCIÓN DE NOCHE</span>
+          </div>
+          <div class="empty-state__copy">
+            <p class="eyebrow">TU GUÍA DE CINE Y LIBROS</p>
+            <h3>¡Hola, soy {{ assistantName }}!</h3>
+            <p>
+              Elige cualquiera de los temas de la izquierda o escríbeme aquí abajo para descubrir tu próxima película y compararla con su libro.
+            </p>
+          </div>
+          <ul class="welcome-ticket__highlights" aria-label="Capacidades de Selma">
+            <li>Póster y ficha oficial en TMDB</li>
+            <li>Comparación directa con su novela</li>
+            <li>Veredicto honesto: ¿vale la pena verla?</li>
+          </ul>
         </div>
       </div>
 

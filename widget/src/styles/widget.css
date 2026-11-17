@@ -192,8 +192,51 @@
   margin: auto 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
+}
+
+.welcome-ticket {
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px dashed rgba(230, 255, 154, 0.28);
+  background: radial-gradient(circle at top right, rgba(255, 74, 28, 0.14), rgba(255, 255, 255, 0.03) 65%);
+}
+
+.welcome-ticket__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.welcome-ticket__badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(230, 255, 154, 0.25);
+  background: rgba(4, 18, 20, 0.55);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--agichat-eyebrow);
+}
+
+.welcome-ticket__highlights {
+  margin: 0;
+  padding: 12px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--agichat-divider);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--agichat-eyebrow);
+}
+
+.welcome-ticket__highlights li::before {
+  content: "✦ ";
+  color: var(--agichat-primary-color);
 }
 
 .empty-state__copy .eyebrow {

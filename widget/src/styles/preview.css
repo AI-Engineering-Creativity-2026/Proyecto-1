@@ -22,12 +22,21 @@
 html,
 body {
   margin: 0;
+  padding: 0;
   width: 100%;
   min-height: 100dvh;
   background: var(--selma-bg);
   color: var(--selma-text);
   font-family: var(--selma-sans);
   overflow-x: clip;
+}
+
+#app,
+#agichat-demo-app,
+selma-demo-app {
+  display: block;
+  width: 100%;
+  min-height: 100dvh;
 }
 
 .app-shell {

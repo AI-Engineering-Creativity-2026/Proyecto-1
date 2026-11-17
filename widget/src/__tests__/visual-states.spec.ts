@@ -7,10 +7,10 @@ const panelSource = readFixture(
 );
 
 describe("ChatPanel visual states", () => {
-  it("renders the empty state with actionable suggestions", () => {
+  it("renders the welcome ticket empty state without duplicate chat suggestions", () => {
     expect(panelSource).toContain("!hasMessages && state.status !== 'error'");
-    expect(panelSource).toContain("const suggestions");
-    expect(panelSource).toContain("<SuggestionButton");
+    expect(panelSource).toContain('class="welcome-ticket"');
+    expect(panelSource).not.toContain("<SuggestionButton");
   });
 
   it("renders loading feedback and disables the composer", () => {
