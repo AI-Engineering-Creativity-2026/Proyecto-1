@@ -5,7 +5,7 @@
 
 Sistema multiagente de recomendación de cine y comparación película-vs-libro (**Mook / Selma**), construido sobre la evolución del widget embebible **AGIChat**. Permite conversar en tiempo real mediante WebSocket, recomendar películas con póster vía **The Movie Database (TMDB)**, comparar adaptaciones con su libro original vía **Google Books**, abrir enlaces de referencia en **IMDb** y **Google Books** automáticamente tras validar una allowlist estricta, y proteger al agente contra ataques **OWASP LLM01** y **LLM07**, todo respaldado por servidores **MCP** independientes y un servidor backend *stateless*.
 
-![Vista principal de bienvenida y chat Mook — Selma](docs/diseno/capturas/01-bienvenida-desktop.jpg)
+![Landing principal de Mook — Selma](docs/diseno/capturas/demo-01-landing.png)
 
 ---
 
@@ -93,16 +93,26 @@ Más detalle en [`server/README.md`](server/README.md) y [`evals/README.md`](eva
 | **Markdown seguro** | Conversión con `marked` y sanitización estricta con `DOMPurify` antes del DOM | [`widget/src/utils/`](widget/src/utils/) |
 | **Modo flotante (*dock*) y responsivo** | Launcher flotante y adaptación fluida para escritorio, tablet y móvil | `03-flotante-desktop.jpg`, `04-tablet-1024.jpg`, `05-movil-390.jpg` |
 
-![Comparación película vs libro con póster y enlaces](docs/diseno/capturas/02-comparacion-desktop.jpg)
+![Comparación Blade Runner vs Do Androids Dream of Electric Sheep? con póster y atribución](docs/diseno/capturas/demo-03-comparacion-blade-runner.png)
 
 ````carousel
+![Bienvenida del chat con Selma](docs/diseno/capturas/demo-02-bienvenida-chat.png)
+<!-- slide -->
+![Comparación No Country for Old Men con monitor de cuota en vivo](docs/diseno/capturas/demo-04-comparacion-cuota.png)
+<!-- slide -->
+![Apertura automática en Google Books](docs/diseno/capturas/demo-05-google-books.png)
+<!-- slide -->
+![Comparación Fight Club con veredicto y póster](docs/diseno/capturas/demo-06-comparacion-fight-club.png)
+<!-- slide -->
+![Recomendación de misterio y suspenso con póster](docs/diseno/capturas/demo-08-recomendacion-poster.png)
+<!-- slide -->
+![Apertura automática en IMDb](docs/diseno/capturas/demo-09-imdb.png)
+<!-- slide -->
 ![Modo flotante en escritorio](docs/diseno/capturas/03-flotante-desktop.jpg)
 <!-- slide -->
 ![Vista responsiva en tablet (1024px)](docs/diseno/capturas/04-tablet-1024.jpg)
 <!-- slide -->
 ![Vista responsiva en móvil (390px)](docs/diseno/capturas/05-movil-390.jpg)
-<!-- slide -->
-![Wireframe original de referencia](docs/images/wireframe.png)
 ````
 
 ### Capacidades funcionales del agente
