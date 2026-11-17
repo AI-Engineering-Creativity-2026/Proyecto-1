@@ -77,6 +77,7 @@ function isSafeEvidence(evidence: AgentPresentationEvidence): boolean {
 
 function prioritizedMovies(movies: readonly MovieAgentEvidence[]): MovieAgentEvidence[] {
   return [
+    ...movies.filter((item) => item.source === "discover_movies"),
     ...movies.filter((item) => item.source === "get_recommendations"),
     ...movies.filter((item) => item.source === "get_movie_details"),
     ...movies.filter((item) => item.source === "search_movies"),

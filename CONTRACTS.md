@@ -284,9 +284,10 @@ estructuradas.
 `tmdb-mcp` expone:
 
 - `search_movies({ query, year? })`
-- `get_movie_details({ movieId })` → `imdb_id`, `poster_url`, `overview`,
+- `get_movie_details({ movieId })` → `title?`, `imdb_id`, `poster_url`, `overview`,
   `rating`, `genres` y `year`.
 - `get_recommendations({ movieId })`
+- `discover_movies({ genres?, year_from?, year_to?, sort_by?, min_votes?, language? })`
 
 `books-mcp` expone:
 

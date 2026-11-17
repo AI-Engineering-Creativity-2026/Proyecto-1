@@ -21,11 +21,25 @@ export interface TmdbServiceOptions {
 
 interface TmdbMovie {
   id?: unknown;
+  title?: unknown;
   imdb_id?: unknown;
   poster_path?: unknown;
   overview?: unknown;
   vote_average?: unknown;
   release_date?: unknown;
+  genres?: unknown;
+}
+
+export interface DiscoverMoviesInput {
+  genres?: string[];
+  year_from?: number;
+  year_to?: number;
+  sort_by?: "popularity" | "rating";
+  min_votes?: number;
+  language?: string;
+}
+
+interface TmdbGenreListResponse {
   genres?: unknown;
 }
 
@@ -78,6 +92,79 @@ export class TmdbService {
     });
   }
 
+  public async discoverMovies(
+    input: DiscoverMoviesInput = {},
+  ): Promise<McpToolResponses["tmdb"]["discover_movies"]> {
+    const language = input.language ? validateLanguage(input.language) : this.language;
+    const yearFrom = validateYear(input.year_from);
+    const yearTo = validateYear(input.year_to);
+    const sortBy = input.sort_by === "rating" ? "vote_average.desc" : "popularity.desc";
+    const minVotes = input.min_votes !== undefined
+      ? validateNonNegativeInteger(input.min_votes, "min_votes")
+      : 200;
+    const genreIds = input.genres?.length
+      ? await this.resolveGenreIds(input.genres, language)
+      : [];
+
+    const cacheKey = `discover:${language}:${genreIds.join(",")}:${yearFrom ?? ""}:${yearTo ?? ""}:${sortBy}:${minVotes}`;
+    return this.cache.getOrFetch("tmdb", cacheKey, async () => {
+      const params = new URLSearchParams({
+        language,
+        sort_by: sortBy,
+        "vote_count.gte": String(minVotes),
+        include_adult: "false",
+      });
+      if (genreIds.length > 0) params.set("with_genres", genreIds.join(","));
+      if (yearFrom !== undefined) params.set("primary_release_date.gte", `${yearFrom}-01-01`);
+      if (yearTo !== undefined) params.set("primary_release_date.lte", `${yearTo}-12-31`);
+
+      const payload = await this.requestJson<TmdbSearchResponse>("/3/discover/movie", params);
+      const movies = asMovies(payload.results).slice(0, 5);
+      await this.enrichMoviesWithImdbIds(movies);
+      const results = await Promise.all(movies.map((movie) => this.toMovieDetails(movie)));
+      return { results };
+    });
+  }
+
+  private async resolveGenreIds(genres: string[], language: string): Promise<number[]> {
+    const genreMap = await this.getGenreMap(language);
+    const resolved: number[] = [];
+    for (const raw of genres) {
+      const normalized = normalizeGenreName(raw);
+      const alias = GENRE_ALIASES[normalized] ?? normalized;
+      const id = genreMap.get(normalized) ?? genreMap.get(alias);
+      if (id !== undefined && !resolved.includes(id)) {
+        resolved.push(id);
+      }
+    }
+    return resolved;
+  }
+
+  private async getGenreMap(language: string): Promise<Map<string, number>> {
+    const entries = await this.cache.getOrFetch("tmdb", `genres:${language}`, async () => {
+      const payload = await this.requestJson<TmdbGenreListResponse>(
+        "/3/genre/movie/list",
+        new URLSearchParams({ language }),
+      );
+      const list = Array.isArray(payload.genres) ? payload.genres : [];
+      return list.flatMap((item): Array<[string, number]> => {
+        if (
+          typeof item === "object" &&
+          item !== null &&
+          "id" in item &&
+          "name" in item &&
+          typeof item.id === "number" &&
+          Number.isInteger(item.id) &&
+          typeof item.name === "string"
+        ) {
+          return [[normalizeGenreName(item.name), item.id]];
+        }
+        return [];
+      });
+    });
+    return new Map(entries);
+  }
+
   public async getMovieDetails(movieId: string): Promise<MovieDetails> {
     const safeMovieId = validateMovieId(movieId);
     return this.cache.getOrFetch("tmdb", `details:${this.language}:${safeMovieId}`, async () => {
@@ -103,6 +190,79 @@ export class TmdbService {
     });
   }
 
+  public async discoverMovies(
+    input: DiscoverMoviesInput = {},
+  ): Promise<McpToolResponses["tmdb"]["discover_movies"]> {
+    const language = input.language ? validateLanguage(input.language) : this.language;
+    const yearFrom = validateYear(input.year_from);
+    const yearTo = validateYear(input.year_to);
+    const sortBy = input.sort_by === "rating" ? "vote_average.desc" : "popularity.desc";
+    const minVotes = input.min_votes !== undefined
+      ? validateNonNegativeInteger(input.min_votes, "min_votes")
+      : 200;
+    const genreIds = input.genres?.length
+      ? await this.resolveGenreIds(input.genres, language)
+      : [];
+
+    const cacheKey = `discover:${language}:${genreIds.join(",")}:${yearFrom ?? ""}:${yearTo ?? ""}:${sortBy}:${minVotes}`;
+    return this.cache.getOrFetch("tmdb", cacheKey, async () => {
+      const params = new URLSearchParams({
+        language,
+        sort_by: sortBy,
+        "vote_count.gte": String(minVotes),
+        include_adult: "false",
+      });
+      if (genreIds.length > 0) params.set("with_genres", genreIds.join(","));
+      if (yearFrom !== undefined) params.set("primary_release_date.gte", `${yearFrom}-01-01`);
+      if (yearTo !== undefined) params.set("primary_release_date.lte", `${yearTo}-12-31`);
+
+      const payload = await this.requestJson<TmdbSearchResponse>("/3/discover/movie", params);
+      const movies = asMovies(payload.results).slice(0, 5);
+      await this.enrichMoviesWithImdbIds(movies);
+      const results = await Promise.all(movies.map((movie) => this.toMovieDetails(movie)));
+      return { results };
+    });
+  }
+
+  private async resolveGenreIds(genres: string[], language: string): Promise<number[]> {
+    const genreMap = await this.getGenreMap(language);
+    const resolved: number[] = [];
+    for (const raw of genres) {
+      const normalized = normalizeGenreName(raw);
+      const alias = GENRE_ALIASES[normalized] ?? normalized;
+      const id = genreMap.get(normalized) ?? genreMap.get(alias);
+      if (id !== undefined && !resolved.includes(id)) {
+        resolved.push(id);
+      }
+    }
+    return resolved;
+  }
+
+  private async getGenreMap(language: string): Promise<Map<string, number>> {
+    const entries = await this.cache.getOrFetch("tmdb", `genres:${language}`, async () => {
+      const payload = await this.requestJson<TmdbGenreListResponse>(
+        "/3/genre/movie/list",
+        new URLSearchParams({ language }),
+      );
+      const list = Array.isArray(payload.genres) ? payload.genres : [];
+      return list.flatMap((item): Array<[string, number]> => {
+        if (
+          typeof item === "object" &&
+          item !== null &&
+          "id" in item &&
+          "name" in item &&
+          typeof item.id === "number" &&
+          Number.isInteger(item.id) &&
+          typeof item.name === "string"
+        ) {
+          return [[normalizeGenreName(item.name), item.id]];
+        }
+        return [];
+      });
+    });
+    return new Map(entries);
+  }
+
   private async enrichMoviesWithImdbIds(movies: TmdbMovie[]): Promise<void> {
     let lookups = 0;
     for (const candidate of movies) {
@@ -123,7 +283,11 @@ export class TmdbService {
 
   private async toMovieDetails(movie: TmdbMovie): Promise<MovieDetails> {
     const posterBase = await this.getPosterBase();
+    const title = typeof movie.title === "string" && movie.title.trim().length > 0
+      ? limitThirdPartyText(movie.title.trim())
+      : undefined;
     return {
+      ...(title !== undefined ? { title } : {}),
       imdb_id: typeof movie.imdb_id === "string" && movie.imdb_id.length > 0 ? movie.imdb_id : null,
       poster_url: buildPosterUrl(posterBase, movie.poster_path),
       overview: limitThirdPartyText(movie.overview),
@@ -218,6 +382,41 @@ function validatePositiveInteger(value: number, name: string): number {
   if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} debe ser positivo.`);
   return value;
 }
+
+function validateNonNegativeInteger(value: number, name: string): number {
+  if (!Number.isInteger(value) || value < 0) throw new RangeError(`${name} debe ser entero no negativo.`);
+  return value;
+}
+
+function normalizeGenreName(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+const GENRE_ALIASES: Record<string, string> = {
+  "science fiction": "ciencia ficcion",
+  "sci-fi": "ciencia ficcion",
+  "scifi": "ciencia ficcion",
+  "action": "accion",
+  "adventure": "aventura",
+  "animation": "animacion",
+  "comedy": "comedia",
+  "crime": "crimen",
+  "documentary": "documental",
+  "family": "familia",
+  "fantasy": "fantasia",
+  "history": "historia",
+  "horror": "terror",
+  "music": "musica",
+  "mystery": "misterio",
+  "thriller": "suspense",
+  "suspenso": "suspense",
+  "war": "belica",
+};
 
 function limitThirdPartyText(value: unknown): string {
   return typeof value === "string" ? value.slice(0, MAX_OVERVIEW_LENGTH) : "";
