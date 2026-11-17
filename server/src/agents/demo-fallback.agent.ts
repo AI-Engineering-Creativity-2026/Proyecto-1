@@ -137,19 +137,27 @@ async function respondWithMcpFallback(
     : "Aquí tienes recomendaciones:";
 
   if (anchorTitle) {
-    const anchorSearch = await clients.tmdb.searchMovies({ query: anchorTitle });
-    const anchor = anchorSearch.results[0];
-    if (anchor) {
-      const recs = await clients.tmdb.getRecommendations({ movieId: String(anchor.id) });
-      if (recs.results.length > 0) {
-        moviesRes = recs;
-        sourceType = "get_recommendations";
-        heading = `Si te gustó **${anchor.title}**, te recomiendo estas películas similares:`;
-      } else if (!moviesRes && anchor.genres[0]) {
+    try {
+      const anchorSearch = await clients.tmdb.searchMovies({ query: anchorTitle });
+      const anchor = anchorSearch.results[0];
+      if (anchor?.imdb_id) {
+        const recs = await clients.tmdb.getRecommendations({ movieId: anchor.imdb_id });
+        const filtered = recs.results.filter(
+          (item) => !(item.title ?? "").toLowerCase().includes(anchorTitle.toLowerCase()),
+        );
+        if (filtered.length > 0) {
+          moviesRes = { results: filtered };
+          sourceType = "get_recommendations";
+          heading = `Si te gustó **${anchor.title ?? anchorTitle}**, te recomiendo estas películas similares:`;
+        }
+      }
+      if ((!moviesRes || moviesRes.results.length === 0) && anchor?.genres[0]) {
         moviesRes = await clients.tmdb.discoverMovies({ genres: [anchor.genres[0]] });
         sourceType = "discover_movies";
-        heading = `Si te gustó **${anchor.title}**, aquí tienes películas de ${anchor.genres[0]}:`;
+        heading = `Si te gustó **${anchor.title ?? anchorTitle}**, aquí tienes películas de ${anchor.genres[0]}:`;
       }
+    } catch {
+      // Fall back to genre discovery or search below when anchor lookup fails.
     }
   }
 
