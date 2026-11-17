@@ -36,26 +36,23 @@ describe("ChatPanel with real ChatState", () => {
     });
 
     expect(wrapper.find(".empty-state").exists()).toBe(true);
-    const suggestionGroup = wrapper.get('[aria-label="Suggested movie and book questions"]');
+    const suggestionGroup = wrapper.get('[aria-label="Preguntas sugeridas sobre películas y libros"]');
     const suggestions = suggestionGroup.findAll("button.suggestion-button");
 
-    expect(suggestions).toHaveLength(2);
+    expect(suggestions).toHaveLength(3);
     expect(suggestions.map((button) => button.text())).toEqual([
-      "Recommend a movie based on my favorite genres.",
-      "Compare Dune with the book it is based on.",
+      "Recomiéndame ciencia ficción",
+      "Compara Blade Runner con su libro",
+      "¿Vale la pena ver Dune?",
     ]);
 
     await suggestions[0].trigger("click");
     await suggestions[1].trigger("click");
+    await suggestions[2].trigger("click");
 
-    expect(sendMessage).toHaveBeenNthCalledWith(
-      1,
-      "Recommend a movie based on my favorite genres.",
-    );
-    expect(sendMessage).toHaveBeenNthCalledWith(
-      2,
-      "Compare Dune with the book it is based on.",
-    );
+    expect(sendMessage).toHaveBeenNthCalledWith(1, "Recomiéndame ciencia ficción");
+    expect(sendMessage).toHaveBeenNthCalledWith(2, "Compara Blade Runner con su libro");
+    expect(sendMessage).toHaveBeenNthCalledWith(3, "¿Vale la pena ver Dune?");
   });
 
   it("renders waiting_response with the typing indicator and disabled input", () => {
@@ -121,7 +118,7 @@ describe("ChatPanel with real ChatState", () => {
       });
 
       expect(wrapper.get('[role="alert"]').text()).toContain(message);
-      expect(wrapper.get(".error-card button").text()).toContain("Try again");
+      expect(wrapper.get(".error-card button").text()).toContain("Intentar de nuevo");
     }
   });
 });

@@ -2,10 +2,14 @@ import { defineCustomElement } from "vue";
 
 import App from "./App.vue";
 
+export type WidgetMode = "floating" | "dock";
+
 export interface AGIChatConfig {
   containerId: string;
   apiUrl: string;
   conversationId?: string;
+  assistantName?: string;
+  mode?: WidgetMode;
   theme?: {
     primaryColor?: string;
     fontFamily?: string;
@@ -53,6 +57,8 @@ export function init(config: AGIChatConfig): void {
   const element = document.createElement(widgetTagName);
   element.setAttribute("api-url", config.apiUrl);
   element.setAttribute("conversation-id", createConversationId(config.conversationId));
+  element.setAttribute("assistant-name", config.assistantName?.trim() || "Selma");
+  element.setAttribute("mode", config.mode === "dock" ? "dock" : "floating");
   applyTheme(element, config.theme);
   container.appendChild(element);
   mountedElement = element;

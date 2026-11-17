@@ -21,7 +21,7 @@ describe("ChatPanel visual states", () => {
   it("renders a recoverable error", () => {
     expect(panelSource).toContain('class="error-card"');
     expect(panelSource).toContain("state.error");
-    expect(panelSource).toContain("Try again");
+    expect(panelSource).toContain("Intentar de nuevo");
     expect(panelSource).toContain("retryMessage");
   });
 
