@@ -189,5 +189,29 @@ describe("App", () => {
     expect(wrapper.find(".chat-panel").exists()).toBe(false);
     await wrapper.find(".chat-launcher").trigger("click");
     expect(wrapper.find(".chat-panel").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("supports dock mode and forwards agichat:send custom events", async () => {
+    const wrapper = mount(App, {
+      props: {
+        apiUrl: "ws://localhost:3000/ws",
+        conversationId: "conversation-test",
+        mode: "dock",
+        assistantName: "Selma",
+      },
+    });
+
+    expect(wrapper.find(".widget-stage--dock").exists()).toBe(true);
+    expect(wrapper.find(".chat-panel--dock").exists()).toBe(true);
+    expect(wrapper.find(".chat-launcher--dock-hidden").exists()).toBe(true);
+
+    window.dispatchEvent(
+      new CustomEvent("agichat:send", {
+        detail: { text: "Recomiéndame ciencia ficción" },
+      }),
+    );
+    await nextTick();
+    wrapper.unmount();
   });
 });
