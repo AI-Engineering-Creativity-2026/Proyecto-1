@@ -1,0 +1,66 @@
+[
+  {
+    "title": "Blade Runner",
+    "year": 1982,
+    "book": "Do Androids Dream of Electric Sheep?",
+    "author": "Philip K. Dick",
+    "tmdb_id": 78,
+    "poster_path": "/pBA2J6iQMiP5Zd4ewMKdOWfq1HV.jpg"
+  },
+  {
+    "title": "Project Hail Mary",
+    "year": 2026,
+    "book": "Project Hail Mary",
+    "author": "Andy Weir",
+    "tmdb_id": 687163,
+    "poster_path": "/cWpvRQcppLnXD0Kno4OZUzkA05R.jpg"
+  },
+  {
+    "title": "Dune",
+    "year": 2021,
+    "book": "Dune",
+    "author": "Frank Herbert",
+    "tmdb_id": 438631,
+    "poster_path": "/1Op57Khovv3ANSWn3TvhMStBboV.jpg"
+  },
+  {
+    "title": "The Lord of the Rings: The Fellowship of the Ring",
+    "year": 2001,
+    "book": "The Lord of the Rings",
+    "author": "J. R. R. Tolkien",
+    "tmdb_id": 120,
+    "poster_path": "/9xtH1RmAzQ0rrMBNUMXstb2s3er.jpg"
+  },
+  {
+    "title": "Jurassic Park",
+    "year": 1993,
+    "book": "Jurassic Park",
+    "author": "Michael Crichton",
+    "tmdb_id": 329,
+    "poster_path": "/h831eszSFmEyr94WKcgscqPIRbh.jpg"
+  },
+  {
+    "title": "The Shining",
+    "year": 1980,
+    "book": "The Shining",
+    "author": "Stephen King",
+    "tmdb_id": 694,
+    "poster_path": "/mm003Mj2e9kJRsrxiVdPn2BSBPh.jpg"
+  },
+  {
+    "title": "Fight Club",
+    "year": 1999,
+    "book": "Fight Club",
+    "author": "Chuck Palahniuk",
+    "tmdb_id": 550,
+    "poster_path": "/bI0BhpswEApC0B17RhLZtRVPZiQ.jpg"
+  },
+  {
+    "title": "No Country for Old Men",
+    "year": 2007,
+    "book": "No Country for Old Men",
+    "author": "Cormac McCarthy",
+    "tmdb_id": 6977,
+    "poster_path": "/zEPHUBFa7mFsF9xO5Vzx6mjZ1JE.jpg"
+  }
+]

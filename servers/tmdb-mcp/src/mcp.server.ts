@@ -8,7 +8,7 @@ export function createTmdbMcpHandler(service = new TmdbService()): (request: Req
   return async (request) => {
     const server = new McpServer(
       { name: "tmdb-mcp", version: "0.1.0" },
-      { maxToolInputElements: 4 },
+      { maxToolInputElements: 8 },
     );
     const registerTool = server.registerTool.bind(server) as unknown as (
       name: string,
@@ -42,6 +42,28 @@ export function createTmdbMcpHandler(service = new TmdbService()): (request: Req
         inputSchema: { movieId: z.string().regex(/^\d{1,10}$/) },
       },
       async (args) => executeTool(() => service.getRecommendations(String(args.movieId))),
+    );
+    registerTool(
+      "discover_movies",
+      {
+        description: "Descubre películas en TMDB por género, rango de años, orden e idioma.",
+        inputSchema: {
+          genres: z.array(z.string().min(1)).optional(),
+          year_from: z.number().int().optional(),
+          year_to: z.number().int().optional(),
+          sort_by: z.enum(["popularity", "rating"]).optional(),
+          min_votes: z.number().int().min(0).optional(),
+          language: z.string().min(2).max(10).optional(),
+        },
+      },
+      async (args) => executeTool(() => service.discoverMovies({
+        ...(Array.isArray(args.genres) ? { genres: args.genres.map(String) } : {}),
+        ...(typeof args.year_from === "number" ? { year_from: args.year_from } : {}),
+        ...(typeof args.year_to === "number" ? { year_to: args.year_to } : {}),
+        ...(args.sort_by === "popularity" || args.sort_by === "rating" ? { sort_by: args.sort_by } : {}),
+        ...(typeof args.min_votes === "number" ? { min_votes: args.min_votes } : {}),
+        ...(typeof args.language === "string" ? { language: args.language } : {}),
+      })),
     );
 
     const transport = new WebStandardStreamableHTTPServerTransport({

@@ -26,10 +26,14 @@
     "test:widget": "bun --cwd widget test:unit",
     "eval:functional": "PROMPTFOO_CONFIG_DIR=.promptfoo PROMPTFOO_DISABLE_TELEMETRY=true PROMPTFOO_DISABLE_UPDATE=true promptfoo eval -c evals/promptfooconfig.yaml --no-cache --no-progress-bar",
     "eval:run": "bun evals/run-evals.ts",
+    "smoke:real": "bun scripts/smoke-real.ts",
+    "test:e2e": "bunx playwright test",
     "typecheck": "bun --cwd widget type-check",
     "typecheck:widget": "bun --cwd widget type-check"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.1",
     "@types/bun": "latest",
     "promptfoo": "0.123.1"
   },

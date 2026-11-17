@@ -130,6 +130,26 @@ bun --cwd widget dev
 bun --cwd widget test:unit
 ```
 
+## Modo real
+
+Por defecto `AGENT_MODE=mock`. Para ejecutar el agente real con Groq, TMDB y Google Books:
+
+1. Configura en `.env` (sin commitear):
+   - `AGENT_MODE=groq`
+   - `GROQ_API_KEY`, `GROQ_MODEL`, `TMDB_API_READ_ACCESS_TOKEN`, `TMDB_API_KEY` y `GOOGLE_BOOKS_API_KEY`
+2. Con Docker Compose:
+   ```bash
+   docker compose up --build
+   ```
+3. En desarrollo local (sin Docker), asegúrate de tener `TMDB_MCP_URL=http://localhost:3101/mcp` y `BOOKS_MCP_URL=http://localhost:3102/mcp` en `.env`, y ejecuta en terminales separadas:
+   ```bash
+   bun run dev:tmdb-mcp
+   bun run dev:books-mcp
+   bun run dev:server
+   bun run dev:widget
+   ```
+El servidor imprime `Agente: groq` (o `Agente: mock`) al iniciar.
+
 ## Notas
 
 - El frontend actual está implementado en `widget/` como base del SDK público.

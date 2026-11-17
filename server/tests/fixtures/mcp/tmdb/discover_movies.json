@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "title": "Blade Runner 2049",
+      "imdb_id": "tt1856101",
+      "poster_url": "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg",
+      "overview": "Un joven blade runner descubre un secreto enterrado hace mucho tiempo que podría sumergir lo que queda de la sociedad en el caos.",
+      "rating": 7.6,
+      "genres": ["Ciencia ficción", "Drama"],
+      "year": 2017
+    },
+    {
+      "title": "Dune",
+      "imdb_id": "tt1160419",
+      "poster_url": "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+      "overview": "Paul Atreides debe viajar al planeta más peligroso del universo para asegurar el futuro de su familia y su pueblo.",
+      "rating": 7.8,
+      "genres": ["Ciencia ficción", "Aventura"],
+      "year": 2021
+    }
+  ]
+}

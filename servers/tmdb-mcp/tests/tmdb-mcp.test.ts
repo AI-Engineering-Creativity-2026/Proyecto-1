@@ -181,6 +181,58 @@ describe("TmdbService", () => {
     });
   });
 
+  test("descubre películas por género resolviendo y cacheando la lista de géneros", async () => {
+    const urls: string[] = [];
+    const service = new TmdbService({
+      fetchImpl: async (input) => {
+        const url = String(input);
+        urls.push(url);
+        if (url.includes("configuration")) {
+          return jsonResponse({ images: { secure_base_url: "https://image.tmdb.org/t/p/", poster_sizes: ["w500"] } });
+        }
+        if (url.includes("/3/genre/movie/list")) {
+          return jsonResponse({
+            genres: [
+              { id: 878, name: "Ciencia ficción" },
+              { id: 28, name: "Acción" },
+            ],
+          });
+        }
+        if (url.includes("/3/discover/movie")) {
+          return jsonResponse({
+            results: [{ ...movie, id: 603, title: "Blade Runner", imdb_id: null }],
+          });
+        }
+        if (url.includes("/3/movie/603")) return jsonResponse({ ...movie, title: "Blade Runner" });
+        return jsonResponse({}, 404);
+      },
+    });
+
+    const first = await service.discoverMovies({
+      genres: ["ciencia ficción"],
+      year_from: 1980,
+      year_to: 2025,
+      sort_by: "rating",
+      min_votes: 500,
+    });
+    const second = await service.discoverMovies({ genres: ["Science Fiction"] });
+
+    expect(first.results[0]).toMatchObject({
+      title: "Blade Runner",
+      imdb_id: "tt0133093",
+      poster_url: "https://image.tmdb.org/t/p/w500/matrix.jpg",
+    });
+    expect(second.results).toHaveLength(1);
+    expect(urls.filter((u) => u.includes("/3/genre/movie/list"))).toHaveLength(1);
+    const discoverUrl = urls.find((u) => u.includes("/3/discover/movie")) ?? "";
+    expect(discoverUrl).toContain("with_genres=878");
+    expect(discoverUrl).toContain("vote_count.gte=500");
+    expect(discoverUrl).toContain("sort_by=vote_average.desc");
+    expect(discoverUrl).toContain("primary_release_date.gte=1980-01-01");
+    expect(discoverUrl).toContain("primary_release_date.lte=2025-12-31");
+    expect(Value.Check(McpToolResponseSchemas.tmdb.discover_movies, first)).toBe(true);
+  });
+
   test("usa fallback seguro si falla la configuración de imágenes", async () => {
     const service = new TmdbService({
       fetchImpl: async (input) => String(input).includes("configuration")
@@ -223,6 +275,7 @@ describe("tmdb-mcp Streamable HTTP", () => {
       "search_movies",
       "get_movie_details",
       "get_recommendations",
+      "discover_movies",
     ]);
     const result = await client.callTool({ name: "get_movie_details", arguments: { movieId: "603" } });
     expect(result.isError).not.toBe(true);

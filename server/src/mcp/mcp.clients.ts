@@ -9,12 +9,14 @@ import {
 
 type SearchMoviesInput = Static<typeof McpToolSchemas.search_movies>;
 type MovieIdInput = Static<typeof McpToolSchemas.get_movie_details>;
+type DiscoverMoviesInput = Static<typeof McpToolSchemas.discover_movies>;
 type SearchBooksInput = Static<typeof McpToolSchemas.search_books>;
 type BookIdInput = Static<typeof McpToolSchemas.get_book_details>;
 
 type SearchMoviesResult = Static<typeof McpToolResponseSchemas.tmdb.search_movies>;
 type MovieDetailsResult = Static<typeof McpToolResponseSchemas.tmdb.get_movie_details>;
 type RecommendationsResult = Static<typeof McpToolResponseSchemas.tmdb.get_recommendations>;
+type DiscoverMoviesResult = Static<typeof McpToolResponseSchemas.tmdb.discover_movies>;
 type SearchBooksResult = Static<typeof McpToolResponseSchemas.books.search_books>;
 type BookDetailsResult = Static<typeof McpToolResponseSchemas.books.get_book_details>;
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -40,6 +42,7 @@ export interface TmdbMcpClient {
   searchMovies(input: SearchMoviesInput): Promise<SearchMoviesResult>;
   getMovieDetails(input: MovieIdInput): Promise<MovieDetailsResult>;
   getRecommendations(input: MovieIdInput): Promise<RecommendationsResult>;
+  discoverMovies(input: DiscoverMoviesInput): Promise<DiscoverMoviesResult>;
 }
 
 export interface BooksMcpClient {
@@ -95,6 +98,13 @@ export function createMcpClients(dependencies: McpClientDependencies): McpClient
         "get_recommendations",
         McpToolSchemas.get_recommendations,
         McpToolResponseSchemas.tmdb.get_recommendations,
+        input,
+      ),
+      discoverMovies: (input) => callTool(
+        dependencies.tmdb,
+        "discover_movies",
+        McpToolSchemas.discover_movies,
+        McpToolResponseSchemas.tmdb.discover_movies,
         input,
       ),
     },

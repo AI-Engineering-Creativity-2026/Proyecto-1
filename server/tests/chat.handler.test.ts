@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import { MockAgent } from "../src/agents";
-import { createChatHandler } from "../src/handlers/chat.handler";
+import { createChatHandler, ConversationStore } from "../src/handlers";
 
 const validMessage = {
   type: "user_message" as const,
@@ -101,5 +101,32 @@ describe("createChatHandler", () => {
       expect(response).toMatchObject({ type: "error", error: { code }, timestamp: now().toISOString() });
       expect(JSON.stringify(response)).not.toContain("provider secret");
     }
+  });
+
+  it("isolates conversation turns by conversationId and enforces TTL and eviction", async () => {
+    let currentMs = 1_000;
+    const store = new ConversationStore({
+      maxConversations: 2,
+      maxTurns: 2,
+      ttlMs: 500,
+      now: () => currentMs,
+    });
+
+    store.appendTurn("conv-a", { role: "user", content: "Blade Runner" });
+    store.appendTurn("conv-a", { role: "agent", content: "Do Androids Dream" });
+    store.appendTurn("conv-a", { role: "user", content: "¿Tiene secuela?" });
+    expect(store.getTurns("conv-a")).toEqual([
+      { role: "agent", content: "Do Androids Dream" },
+      { role: "user", content: "¿Tiene secuela?" },
+    ]);
+
+    store.appendTurn("conv-b", { role: "user", content: "Dune" });
+    store.appendTurn("conv-c", { role: "user", content: "Matrix" });
+    expect(store.size).toBe(2);
+    expect(store.getTurns("conv-a")).toEqual([]);
+
+    currentMs += 600;
+    expect(store.size).toBe(0);
+    expect(store.getTurns("conv-c")).toEqual([]);
   });
 });

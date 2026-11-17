@@ -157,9 +157,38 @@ describe("movie subagent", () => {
       "search_movies",
       "get_movie_details",
       "get_recommendations",
+      "discover_movies",
     ]);
     expect(Value.Check(McpToolSchemas.search_movies, { query: "Matrix" })).toBe(true);
     expect(Value.Check(McpToolSchemas.get_movie_details, { movieId: "603" })).toBe(true);
+    expect(Value.Check(McpToolSchemas.discover_movies, { genres: ["Ciencia ficción"] })).toBe(true);
+  });
+
+  it("collects evidence when using discoverMovies for genre recommendations", async () => {
+    const agent = createAgent({
+      searchMovies: async () => ({ results: [] }),
+      getMovieDetails: async () => { throw new Error("unused"); },
+      getRecommendations: async () => ({ results: [] }),
+      discoverMovies: async () => ({
+        results: [{
+          title: "Dune",
+          imdb_id: "tt1160419",
+          poster_url: "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+          overview: "Paul Atreides viaja a Arrakis.",
+          rating: 7.8,
+          genres: ["Ciencia ficción"],
+          year: 2021,
+        }],
+      }),
+    }, async (_prompt, tools) => {
+      const discovered = await tools.discoverMovies?.({ genres: ["Ciencia ficción"] });
+      return `Te recomiendo **${discovered?.results[0]?.title}**.`;
+    });
+
+    const execution = await agent.runWithEvidence("Recomiéndame una película de ciencia ficción");
+    expect(execution.content).toContain("Dune");
+    expect(execution.evidence).toHaveLength(1);
+    expect(execution.evidence[0]?.source).toBe("discover_movies");
   });
 
   it("builds from Groq configuration without making a provider request", () => {

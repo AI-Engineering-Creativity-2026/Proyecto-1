@@ -5,10 +5,12 @@ const props = withDefaults(
   defineProps<{
     disabled?: boolean;
     initialValue?: string;
+    assistantName?: string;
   }>(),
   {
     disabled: false,
     initialValue: "",
+    assistantName: "Selma",
   },
 );
 
@@ -38,18 +40,19 @@ function submit(): void {
 
 <template>
   <form class="chat-composer" @submit.prevent="submit">
-    <label class="sr-only" for="agichat-message">Message Nova</label>
+    <label class="sr-only" for="agichat-message">Escribe un mensaje para {{ assistantName }}</label>
     <textarea
       id="agichat-message"
       v-model="message"
       rows="1"
+      maxlength="2000"
       :disabled="disabled"
-      :placeholder="disabled ? 'Nova is typing…' : 'Write a message…'"
+      :placeholder="disabled ? `${assistantName} está escribiendo…` : `Pregúntale a ${assistantName}…`"
       @keydown.enter.exact.prevent="submit"
     ></textarea>
-    <button type="submit" :disabled="!canSend" aria-label="Send message">
+    <button type="submit" :disabled="!canSend" aria-label="Enviar mensaje">
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4.2 4.9 20 12 4.2 19.1l1.4-5.5L14 12l-8.4-1.6-1.4-5.5Z" />
+        <path d="M5 12h14M13 6l6 6-6 6" />
       </svg>
     </button>
   </form>

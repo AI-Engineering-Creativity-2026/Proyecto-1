@@ -1,12 +1,17 @@
 import { Elysia } from "elysia";
-import { isIncomingMessage } from "@agichat/contracts";
+import { Value } from "@sinclair/typebox/value";
+import {
+  isIncomingMessage,
+  OutgoingMessageSchema,
+  type OutgoingMessage,
+} from "@agichat/contracts";
 import {
   createConfiguredServerAgent,
+  resolveAgentMode,
   type AgentEnvironment,
   type AgentPort,
 } from "./agents";
 import { createChatHandler, randomLatency } from "./handlers";
-import { IncomingMessageSchema, OutgoingMessageSchema } from "./schemas";
 
 interface AppOptions {
   latency?: () => number;
@@ -16,13 +21,36 @@ interface AppOptions {
   environment?: AgentEnvironment;
 }
 
-function genericError(conversationId: string) {
+function invalidMessageError(conversationId: string) {
   return {
     type: "error" as const,
     conversationId,
-    error: { code: "INTERNAL_ERROR", message: "No se pudo procesar el mensaje." },
+    error: {
+      code: "INVALID_MESSAGE" as const,
+      message: "La solicitud es inválida o supera el límite de 2000 caracteres.",
+    },
     timestamp: new Date().toISOString(),
   };
+}
+
+function parseIncomingPayload(raw: unknown): { parsed: unknown; conversationId: string } | null {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+  const conversationId =
+    typeof parsed === "object" &&
+    parsed !== null &&
+    "conversationId" in parsed &&
+    typeof (parsed as { conversationId?: unknown }).conversationId === "string" &&
+    (parsed as { conversationId: string }).conversationId.trim().length > 0
+      ? (parsed as { conversationId: string }).conversationId
+      : "unknown";
+  return { parsed, conversationId };
 }
 
 export function createApp(options: AppOptions = {}) {
@@ -48,22 +76,35 @@ export function createApp(options: AppOptions = {}) {
           return "Origin not allowed";
         }
       },
-      body: OutgoingMessageSchema,
-      async message(ws, message) {
-        const responses = await handler.onOutgoingMessage(message);
-        responses.forEach((response, index) => {
-          const sendResponse = () => {
-            if (!isIncomingMessage(response)) {
-              console.error("Invalid outgoing WebSocket message", response);
-              ws.send(JSON.stringify(genericError(message.conversationId)));
-              return;
-            }
-            ws.send(JSON.stringify(response));
-          };
+      async message(ws, rawMessage) {
+        const extracted = parseIncomingPayload(rawMessage);
+        if (!extracted || !Value.Check(OutgoingMessageSchema, extracted.parsed)) {
+          ws.send(JSON.stringify(invalidMessageError(extracted?.conversationId ?? "unknown")));
+          return;
+        }
 
-          if (index === 0) sendResponse();
-          else setTimeout(sendResponse, latency());
-        });
+        const outgoing = extracted.parsed as OutgoingMessage;
+        const responses = await handler.onOutgoingMessage(outgoing);
+        const sendResponse = (response: unknown) => {
+          if (!isIncomingMessage(response)) {
+            console.error("Invalid outgoing WebSocket message", response);
+            ws.send(JSON.stringify(invalidMessageError(outgoing.conversationId)));
+            return;
+          }
+          ws.send(JSON.stringify(response));
+        };
+
+        if (responses.length === 0) return;
+        sendResponse(responses[0]);
+
+        const remaining = responses.slice(1);
+        if (remaining.length > 0) {
+          setTimeout(() => {
+            for (const response of remaining) {
+              sendResponse(response);
+            }
+          }, latency());
+        }
       },
     })
     .get("/", () => Bun.file(new URL("../public/index.html", import.meta.url)))
@@ -82,6 +123,7 @@ export function createApp(options: AppOptions = {}) {
 
 if (import.meta.main) {
   const port = Number(process.env.PORT ?? 3000);
+  const agentMode = resolveAgentMode(process.env);
   const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
@@ -91,7 +133,8 @@ if (import.meta.main) {
     agentTimeoutMs: Number(process.env.AGENT_TIMEOUT_MS ?? 30_000),
   }).listen(port);
 
+  console.log(`Agente: ${agentMode}`);
   console.log(
-    `AGIChat mock API listening at ${app.server?.hostname}:${app.server?.port}`
+    `AGIChat API listening at ${app.server?.hostname}:${app.server?.port}`
   );
 }

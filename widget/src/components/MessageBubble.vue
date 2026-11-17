@@ -7,14 +7,20 @@ import { isAllowedPosterUrl } from "../utils/posters";
 import AgentAvatar from "./AgentAvatar.vue";
 import ProviderAttribution from "./ProviderAttribution.vue";
 
-defineProps<{
-  message: Message;
-}>();
+withDefaults(
+  defineProps<{
+    message: Message;
+    assistantName?: string;
+  }>(),
+  {
+    assistantName: "Selma",
+  },
+);
 
 const failedPosterIndexes = ref<number[]>([]);
 
 function formatTime(timestamp: string): string {
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("es", {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(timestamp));
@@ -29,7 +35,7 @@ function handlePosterError(index: number): void {
 
 <template>
   <article class="message" :class="`message--${message.role}`">
-    <AgentAvatar v-if="message.role === 'agent'" label="Nova" />
+    <AgentAvatar v-if="message.role === 'agent'" :label="assistantName" />
     <div class="message__content">
       <div class="message__bubble markdown-content" v-html="renderMarkdown(message.content)">
       </div>
@@ -45,7 +51,7 @@ function handlePosterError(index: number): void {
           <img
             v-if="isAllowedPosterUrl(attachment.url) && !failedPosterIndexes.includes(index)"
             :src="attachment.url"
-            :alt="attachment.alt || attachment.title || 'Movie poster'"
+            :alt="attachment.alt || attachment.title || 'Póster de película'"
             loading="lazy"
             decoding="async"
             referrerpolicy="no-referrer"
@@ -55,13 +61,13 @@ function handlePosterError(index: number): void {
             v-else
             class="poster-card__fallback"
             role="img"
-            :aria-label="`${attachment.alt || attachment.title || 'Movie poster'}; poster unavailable`"
+            :aria-label="`${attachment.alt || attachment.title || 'Póster de película'}; póster no disponible`"
           >
             <svg viewBox="0 0 32 32" aria-hidden="true">
               <rect x="6" y="4" width="20" height="24" rx="3" />
               <path d="M11 10h10M11 15h10M11 20h6" />
             </svg>
-            <span>Poster unavailable</span>
+            <span>Póster no disponible</span>
           </div>
           <figcaption v-if="attachment.title">{{ attachment.title }}</figcaption>
         </figure>
@@ -72,7 +78,7 @@ function handlePosterError(index: number): void {
       />
       <div class="message__meta">
         <span>{{ formatTime(message.timestamp) }}</span>
-        <span v-if="message.status === 'sent'" class="message__sent" aria-label="Sent">
+        <span v-if="message.status === 'sent'" class="message__sent" aria-label="Enviado">
           <svg viewBox="0 0 16 16" aria-hidden="true">
             <path d="m2.5 8.5 2.2 2.2 4-4.4M7.3 10.7l1.1 1.1 5.1-5.5" />
           </svg>

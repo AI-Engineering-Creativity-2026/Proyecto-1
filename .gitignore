@@ -11,3 +11,5 @@ coverage
 /evals/report.md
 .DS_Store
 **/*.bun
+test-results/
+playwright-report/

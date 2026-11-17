@@ -190,4 +190,101 @@ describe("comparison subagent", () => {
       GROQ_MODEL: "test-model",
     })).toThrow("GROQ_API_KEY is required");
   });
+
+  it("identifies Blade Runner source book and verifies author before comparing", async () => {
+    const searchCalls: unknown[] = [];
+    const books: BooksMcpClient = {
+      async searchBooks(input) {
+        searchCalls.push(input);
+        return {
+          results: [{
+            volumeId: "dick-androids-1",
+            title: "Do Androids Dream of Electric Sheep?",
+            authors: ["Philip K. Dick"],
+            description: "Rick Deckard hunts rogue androids in a post-apocalyptic San Francisco.",
+          }],
+        };
+      },
+      async getBookDetails(input) {
+        return {
+          volumeId: input.volumeId,
+          title: "Do Androids Dream of Electric Sheep?",
+          authors: ["Philip K. Dick"],
+          description: "Rick Deckard hunts rogue androids in a post-apocalyptic San Francisco.",
+        };
+      },
+    };
+    const bladeRunner: MovieForComparison = {
+      title: "Blade Runner",
+      overview: "Rick Deckard must retire four replicants in futuristic Los Angeles.",
+      year: 1982,
+    };
+    const agent = new ComparisonAgent(
+      books,
+      async (m, b) => mockRuntime(m, b),
+      async () => ({
+        hasSourceBook: true,
+        bookTitle: "Do Androids Dream of Electric Sheep?",
+        bookAuthor: "Philip K. Dick",
+      }),
+    );
+
+    const execution = await agent.runWithEvidence(bladeRunner);
+    expect(searchCalls).toEqual([{
+      title: "Do Androids Dream of Electric Sheep?",
+      author: "Philip K. Dick",
+    }]);
+    expect(execution.book?.volumeId).toBe("dick-androids-1");
+    expect(execution.verdict).toBe("worth_watching");
+    expect(execution.content).toContain("Do Androids Dream of Electric Sheep?");
+  });
+
+  it("skips Google Books and verdict when a movie has no source book", async () => {
+    let searches = 0;
+    const books: BooksMcpClient = {
+      async searchBooks() { searches += 1; return { results: [] }; },
+      async getBookDetails() { throw new Error("unused"); },
+    };
+    const agent = new ComparisonAgent(
+      books,
+      async () => assessmentWithoutEvidence,
+      async () => ({ hasSourceBook: false }),
+    );
+
+    const execution = await agent.runWithEvidence({ title: "Inception", overview: "Dream heist.", year: 2010 });
+    expect(searches).toBe(0);
+    expect(execution.book).toBeNull();
+    expect(execution.verdict).toBeNull();
+    expect(execution.content).toContain("no está basada en un libro fuente");
+  });
+
+  it("refuses comparison and verdict when Google Books result fails author verification", async () => {
+    const books: BooksMcpClient = {
+      async searchBooks() {
+        return {
+          results: [{
+            volumeId: "unrelated-1",
+            title: "Blade Runner",
+            authors: ["Alguien Desconocido"],
+            description: "Unrelated book.",
+          }],
+        };
+      },
+      async getBookDetails() { throw new Error("unused"); },
+    };
+    const agent = new ComparisonAgent(
+      books,
+      async () => assessmentWithoutEvidence,
+      async () => ({
+        hasSourceBook: true,
+        bookTitle: "Do Androids Dream of Electric Sheep?",
+        bookAuthor: "Philip K. Dick",
+      }),
+    );
+
+    const execution = await agent.runWithEvidence({ title: "Blade Runner", overview: "Sci-fi.", year: 1982 });
+    expect(execution.book).toBeNull();
+    expect(execution.verdict).toBeNull();
+    expect(execution.content).toContain("No pude verificar un libro fuente confiable");
+  });
 });

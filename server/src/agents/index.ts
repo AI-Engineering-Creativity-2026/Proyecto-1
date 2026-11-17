@@ -1,4 +1,4 @@
-export type { AgentPort, ConversationContext } from "./agent.port";
+export type { AgentPort, ConversationContext, ConversationTurn } from "./agent.port";
 export { MockAgent } from "./mock.agent";
 export { createConfiguredAgent, createConfiguredGroqModel, GroqAgent } from "./groq.agent";
 export type { AgentEnvironment, ConfiguredGroqModel, GroqTextGenerator } from "./groq.agent";
@@ -33,5 +33,6 @@ export {
   createOrchestratorAgent,
   createOrchestratorSdkTools,
   createOrchestratorTools,
+  resolveAgentMode,
 } from "./orchestrator.agent";
 export type { OrchestratorRuntime, OrchestratorTools } from "./orchestrator.agent";

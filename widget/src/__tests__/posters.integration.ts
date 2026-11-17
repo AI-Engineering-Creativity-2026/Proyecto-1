@@ -54,7 +54,7 @@ describe("MessageBubble posters", () => {
       expect(wrapper.get(".poster-card__fallback").attributes("aria-label")).toContain(
         "Test movie poster",
       );
-      expect(wrapper.get(".poster-card__fallback").text()).toContain("Poster unavailable");
+      expect(wrapper.get(".poster-card__fallback").text()).toContain("Póster no disponible");
       wrapper.unmount();
     }
   });
@@ -71,6 +71,6 @@ describe("MessageBubble posters", () => {
     await wrapper.get(".poster-card img").trigger("error");
 
     expect(wrapper.find(".poster-card img").exists()).toBe(false);
-    expect(wrapper.get(".poster-card__fallback").text()).toContain("Poster unavailable");
+    expect(wrapper.get(".poster-card__fallback").text()).toContain("Póster no disponible");
   });
 });

@@ -90,7 +90,8 @@ function runWebSocketCase(
       const message = validMessages[0];
       if (!message || message.conversationId !== conversationId) return;
       messages.push(message);
-      if (message.type === "agent_message" || message.type === "error") finish();
+      if (message.type === "error") finish();
+      else if (message.type === "agent_message") setTimeout(() => finish(), 50);
     });
 
     socket.addEventListener("error", () => finish(

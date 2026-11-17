@@ -1,21 +1,29 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import type { ExternalLinkAction } from "../utils/external-links";
 import type { ChatState } from "@agichat/core";
+import type { ExternalLinkAction } from "../utils/external-links";
 import AgentAvatar from "./AgentAvatar.vue";
 import ChatComposer from "./ChatComposer.vue";
 import MessageBubble from "./MessageBubble.vue";
-import SuggestionButton from "./SuggestionButton.vue";
 import TypingIndicator from "./TypingIndicator.vue";
 
-const props = defineProps<{
-  state: ChatState;
-  sendMessage: (text: string) => void;
-  retryLastMessage: () => void;
-  clearError: () => void;
-  externalAction?: ExternalLinkAction | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    state: ChatState;
+    sendMessage: (text: string) => void;
+    retryLastMessage: () => void;
+    clearError: () => void;
+    externalAction?: ExternalLinkAction | null;
+    assistantName?: string;
+    docked?: boolean;
+  }>(),
+  {
+    externalAction: null,
+    assistantName: "Selma",
+    docked: false,
+  },
+);
 
 const emit = defineEmits<{
   close: [];
@@ -28,10 +36,6 @@ const hasMessages = computed(() => props.state.messages.length > 0);
 const externalLinkName = computed(() =>
   props.externalAction?.source === "imdb" ? "IMDb" : "Google Books",
 );
-const suggestions = [
-  "Recommend a movie based on my favorite genres.",
-  "Compare Dune with the book it is based on.",
-] as const;
 
 function submitMessage(message: string): void {
   composerValue.value = "";
@@ -45,16 +49,26 @@ function retryMessage(): void {
 </script>
 
 <template>
-  <section class="chat-panel" :data-state="state.status" aria-label="Chat with Nova">
+  <section
+    class="chat-panel"
+    :class="{ 'chat-panel--dock': docked }"
+    :data-state="state.status"
+    :aria-label="`Chat con ${assistantName}`"
+  >
     <header class="chat-header">
       <div class="chat-header__identity">
-        <AgentAvatar label="Nova" online />
+        <AgentAvatar :label="assistantName" online />
         <div>
-          <h2>Nova</h2>
-          <p>Online · Replies instantly</p>
+          <h2>{{ assistantName }}</h2>
+          <p>En línea · Responde al instante</p>
         </div>
       </div>
-      <button type="button" aria-label="Close chat" @click="emit('close')">
+      <button
+        type="button"
+        class="chat-panel__close"
+        aria-label="Cerrar chat"
+        @click="emit('close')"
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m7 7 10 10M17 7 7 17" />
         </svg>
@@ -63,35 +77,36 @@ function retryMessage(): void {
 
     <div class="chat-body" aria-live="polite">
       <div v-if="!hasMessages && state.status !== 'error'" class="empty-state">
-        <AgentAvatar label="Nova" size="large" />
-        <div class="empty-state__copy">
-          <p class="eyebrow">YOUR AI GUIDE</p>
-          <h3>Hi, I’m Nova.</h3>
-          <p>Get a movie recommendation or compare a film with its book.</p>
-        </div>
-        <div
-          class="suggestions"
-          role="group"
-          aria-label="Suggested movie and book questions"
-        >
-          <SuggestionButton
-            v-for="suggestion in suggestions"
-            :key="suggestion"
-            :label="suggestion"
-            @select="submitMessage"
-          />
+        <div class="welcome-ticket">
+          <div class="welcome-ticket__head">
+            <AgentAvatar :label="assistantName" size="large" />
+            <span class="welcome-ticket__badge">FUNCIÓN DE NOCHE</span>
+          </div>
+          <div class="empty-state__copy">
+            <p class="eyebrow">TU GUÍA DE CINE Y LIBROS</p>
+            <h3>¡Hola, soy {{ assistantName }}!</h3>
+            <p>
+              Elige cualquiera de los temas de la izquierda o escríbeme aquí abajo para descubrir tu próxima película y compararla con su libro.
+            </p>
+          </div>
+          <ul class="welcome-ticket__highlights" aria-label="Capacidades de Selma">
+            <li>Póster y ficha oficial en TMDB</li>
+            <li>Comparación directa con su novela</li>
+            <li>Veredicto honesto: ¿vale la pena verla?</li>
+          </ul>
         </div>
       </div>
 
       <template v-else>
-        <div class="conversation-date"><span>Today</span></div>
+        <div class="conversation-date"><span>Hoy</span></div>
         <div class="message-list">
           <MessageBubble
             v-for="message in state.messages"
             :key="message.id"
             :message="message"
+            :assistant-name="assistantName"
           />
-          <TypingIndicator v-if="isWaiting" />
+          <TypingIndicator v-if="isWaiting" :assistant-name="assistantName" />
         </div>
 
         <div v-if="state.status === 'error' && state.error" class="error-card" role="alert">
@@ -102,10 +117,10 @@ function retryMessage(): void {
             </svg>
           </span>
           <div>
-            <strong>Message not sent</strong>
+            <strong>No se pudo enviar el mensaje</strong>
             <p>{{ state.error }}</p>
             <button type="button" @click="retryMessage">
-              Try again
+              Intentar de nuevo
               <svg viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M13 7a5 5 0 1 0-1.3 4.7M13 3.5V7H9.5" />
               </svg>
@@ -115,13 +130,13 @@ function retryMessage(): void {
       </template>
 
       <div v-if="externalAction" class="external-link-fallback" role="status">
-        <p>Your browser blocked the pop-up. You can open the link manually.</p>
+        <p>Tu navegador bloqueó la ventana emergente. Puedes abrir el enlace manualmente.</p>
         <button
           type="button"
-          :aria-label="`Open ${externalLinkName} in a new tab`"
+          :aria-label="`Abrir ${externalLinkName} en una nueva pestaña`"
           @click="emit('openExternalLink')"
         >
-          Open {{ externalLinkName }}
+          Abrir {{ externalLinkName }}
         </button>
       </div>
     </div>
@@ -130,9 +145,10 @@ function retryMessage(): void {
       <ChatComposer
         :disabled="isWaiting"
         :initial-value="composerValue"
+        :assistant-name="assistantName"
         @submit="submitMessage"
       />
-      <p>Powered by <strong>AGIChat</strong></p>
+      <p class="chat-footer__note">Datos de películas por TMDB · Libros por Google Books</p>
     </footer>
   </section>
 </template>

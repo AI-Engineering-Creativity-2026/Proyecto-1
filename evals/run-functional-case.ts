@@ -75,14 +75,21 @@ export async function runFunctionalCase(prompt: string) {
   };
   const agent = new OrchestratorAgent(tools, async (request, availableTools) => {
     if (/compar/i.test(request)) {
-      return (await availableTools.compareMovieWithBook({
+      const comparison = await availableTools.compareMovieWithBook({
         title: "The Matrix",
         overview: "A computer hacker discovers that the world is a simulated reality.",
         year: 1999,
         genres: ["Action", "Science Fiction"],
-      })).content;
+      });
+      if (comparison.book?.volumeId) {
+        availableTools.selectFeaturedItems?.({ bookVolumeId: comparison.book.volumeId });
+      }
+      return comparison.content;
     }
-    return (await availableTools.recommendMovies({ request })).content;
+    const recommended = await availableTools.recommendMovies({ request });
+    const imdbId = recommended.movies?.find((m) => m.movie.imdb_id !== null)?.movie.imdb_id;
+    if (imdbId) availableTools.selectFeaturedItems?.({ imdbId });
+    return recommended.content;
   }, () => new Date("2026-01-01T00:00:00.000Z"));
   const message: OutgoingMessage = {
     type: "user_message",

@@ -82,6 +82,8 @@ export const UiActionSchema = Type.Object({
     url: Type.String({ format: "uri" }),
     source: Type.Union([Type.Literal("imdb"), Type.Literal("google_books")]),
     reason: Type.Optional(Type.String()),
+    title: Type.Optional(Type.String()),
+    year: Type.Optional(Type.Union([Type.Integer(), Type.Null()])),
   }),
 });
 
@@ -99,6 +101,14 @@ export const McpToolSchemas = {
   }),
   get_movie_details: Type.Object({ movieId: Type.String({ minLength: 1 }) }),
   get_recommendations: Type.Object({ movieId: Type.String({ minLength: 1 }) }),
+  discover_movies: Type.Object({
+    genres: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+    year_from: Type.Optional(Type.Integer()),
+    year_to: Type.Optional(Type.Integer()),
+    sort_by: Type.Optional(Type.Union([Type.Literal("popularity"), Type.Literal("rating")])),
+    min_votes: Type.Optional(Type.Integer({ minimum: 0 })),
+    language: Type.Optional(Type.String({ minLength: 2, maxLength: 10 })),
+  }),
   search_books: Type.Object({
     title: Type.String({ minLength: 1 }),
     author: Type.Optional(Type.String()),
@@ -107,6 +117,7 @@ export const McpToolSchemas = {
 } as const;
 
 export const MovieDetailsSchema = Type.Object({
+  title: Type.Optional(Type.String()),
   imdb_id: Type.Union([Type.String(), Type.Null()]),
   poster_url: Type.Union([Type.String({ format: "uri" }), Type.Null()]),
   overview: Type.String(),
@@ -127,6 +138,7 @@ export const McpToolResponseSchemas = {
     search_movies: Type.Object({ results: Type.Array(MovieDetailsSchema) }),
     get_movie_details: MovieDetailsSchema,
     get_recommendations: Type.Object({ results: Type.Array(MovieDetailsSchema) }),
+    discover_movies: Type.Object({ results: Type.Array(MovieDetailsSchema) }),
   },
   books: {
     search_books: Type.Object({ results: Type.Array(BookDetailsSchema) }),

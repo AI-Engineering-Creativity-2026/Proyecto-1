@@ -24,38 +24,40 @@ function createUserMessage(status: Message["status"] = "sent"): Message {
 }
 
 describe("ChatPanel with real ChatState", () => {
-  it("renders the empty state and sends a selected suggestion", async () => {
-    const sendMessage = vi.fn<(message: string) => void>();
+  it("renders the welcome ticket empty state and hides it once messages arrive", () => {
     const wrapper = mount(ChatPanel, {
       props: {
         state: createState(),
-        sendMessage,
+        sendMessage: vi.fn<(message: string) => void>(),
         retryLastMessage: vi.fn<() => void>(),
         clearError: vi.fn<() => void>(),
       },
     });
 
     expect(wrapper.find(".empty-state").exists()).toBe(true);
-    const suggestionGroup = wrapper.get('[aria-label="Suggested movie and book questions"]');
-    const suggestions = suggestionGroup.findAll("button.suggestion-button");
+    expect(wrapper.find(".welcome-ticket").exists()).toBe(true);
+    expect(wrapper.findAll("button.suggestion-button")).toHaveLength(0);
+    expect(wrapper.text()).toContain("FUNCIÓN DE NOCHE");
 
-    expect(suggestions).toHaveLength(2);
-    expect(suggestions.map((button) => button.text())).toEqual([
-      "Recommend a movie based on my favorite genres.",
-      "Compare Dune with the book it is based on.",
-    ]);
-
-    await suggestions[0].trigger("click");
-    await suggestions[1].trigger("click");
-
-    expect(sendMessage).toHaveBeenNthCalledWith(
-      1,
-      "Recommend a movie based on my favorite genres.",
-    );
-    expect(sendMessage).toHaveBeenNthCalledWith(
-      2,
-      "Compare Dune with the book it is based on.",
-    );
+    const populated = mount(ChatPanel, {
+      props: {
+        state: createState({
+          messages: [
+            {
+              id: "m1",
+              role: "user",
+              content: "Hola",
+              timestamp: "2026-11-17T12:00:00.000Z",
+              status: "sent",
+            },
+          ],
+        }),
+        sendMessage: vi.fn<(message: string) => void>(),
+        retryLastMessage: vi.fn<() => void>(),
+        clearError: vi.fn<() => void>(),
+      },
+    });
+    expect(populated.find(".welcome-ticket").exists()).toBe(false);
   });
 
   it("renders waiting_response with the typing indicator and disabled input", () => {
@@ -121,7 +123,7 @@ describe("ChatPanel with real ChatState", () => {
       });
 
       expect(wrapper.get('[role="alert"]').text()).toContain(message);
-      expect(wrapper.get(".error-card button").text()).toContain("Try again");
+      expect(wrapper.get(".error-card button").text()).toContain("Intentar de nuevo");
     }
   });
 });

@@ -52,8 +52,8 @@ export function createAgentOutputMessages(
       conversationId,
       timestamp: now().toISOString(),
     },
-    ...actions,
     agentMessage,
+    ...actions,
   ];
 }
 
@@ -77,6 +77,7 @@ function isSafeEvidence(evidence: AgentPresentationEvidence): boolean {
 
 function prioritizedMovies(movies: readonly MovieAgentEvidence[]): MovieAgentEvidence[] {
   return [
+    ...movies.filter((item) => item.source === "discover_movies"),
     ...movies.filter((item) => item.source === "get_recommendations"),
     ...movies.filter((item) => item.source === "get_movie_details"),
     ...movies.filter((item) => item.source === "search_movies"),
@@ -94,8 +95,8 @@ function createPosterAttachments(movies: readonly MovieAgentEvidence[]) {
     attachments.push({
       type: "poster" as const,
       url: movie.poster_url,
-      alt: `Póster de una película recomendada${yearText}.`,
-      title: `Póster de película${movie.year === null ? "" : ` (${movie.year})`}`,
+      alt: `Póster de ${movie.title ? movie.title : "una película recomendada"}${yearText}.`,
+      title: movie.year === null ? "Póster" : `Póster (${movie.year})`,
     });
   }
 
@@ -108,22 +109,25 @@ function createUiActions(
   book: BookDetails | null | undefined,
   now: () => Date,
 ): IncomingMessage[] {
-  const imdbIds = [...new Set(
-    movies
-      .map(({ movie }) => movie.imdb_id)
-      .filter((id): id is string => id !== null),
-  )];
-  const actions: IncomingMessage[] = imdbIds.map((imdbId) => ({
-    type: "ui_action",
-    conversationId,
-    action: {
-      kind: "open_url",
-      url: `https://www.imdb.com/title/${imdbId}/`,
-      source: "imdb",
-      reason: "Abrir la ficha de la película en IMDb.",
-    },
-    timestamp: now().toISOString(),
-  }));
+  const seenImdb = new Set<string>();
+  const actions: IncomingMessage[] = [];
+  for (const { movie } of movies) {
+    if (!movie.imdb_id || seenImdb.has(movie.imdb_id)) continue;
+    seenImdb.add(movie.imdb_id);
+    actions.push({
+      type: "ui_action",
+      conversationId,
+      action: {
+        kind: "open_url",
+        url: `https://www.imdb.com/title/${movie.imdb_id}/`,
+        source: "imdb",
+        reason: "Abrir la ficha de la película en IMDb.",
+        ...(movie.title ? { title: movie.title } : {}),
+        ...(movie.year !== null ? { year: movie.year } : {}),
+      },
+      timestamp: now().toISOString(),
+    });
+  }
 
   if (book !== undefined && book !== null) {
     const bookUrl = new URL("https://books.google.com/books");
@@ -136,6 +140,7 @@ function createUiActions(
         url: bookUrl.toString(),
         source: "google_books",
         reason: "Abrir la ficha del libro en Google Books.",
+        ...(book.title ? { title: book.title } : {}),
       },
       timestamp: now().toISOString(),
     });
