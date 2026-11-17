@@ -95,25 +95,23 @@ Más detalle en [`server/README.md`](server/README.md) y [`evals/README.md`](eva
 
 ![Comparación Blade Runner vs Do Androids Dream of Electric Sheep? con póster y atribución](docs/diseno/capturas/demo-03-comparacion-blade-runner.png)
 
-````carousel
-![Bienvenida del chat con Selma](docs/diseno/capturas/demo-02-bienvenida-chat.png)
-<!-- slide -->
-![Comparación No Country for Old Men con monitor de cuota en vivo](docs/diseno/capturas/demo-04-comparacion-cuota.png)
-<!-- slide -->
-![Apertura automática en Google Books](docs/diseno/capturas/demo-05-google-books.png)
-<!-- slide -->
-![Comparación Fight Club con veredicto y póster](docs/diseno/capturas/demo-06-comparacion-fight-club.png)
-<!-- slide -->
-![Recomendación de misterio y suspenso con póster](docs/diseno/capturas/demo-08-recomendacion-poster.png)
-<!-- slide -->
-![Apertura automática en IMDb](docs/diseno/capturas/demo-09-imdb.png)
-<!-- slide -->
-![Modo flotante en escritorio](docs/diseno/capturas/03-flotante-desktop.jpg)
-<!-- slide -->
-![Vista responsiva en tablet (1024px)](docs/diseno/capturas/04-tablet-1024.jpg)
-<!-- slide -->
+| Bienvenida en el chat con Selma | Comparación con monitor de cuota en vivo |
+| --- | --- |
+| ![Bienvenida del chat con Selma](docs/diseno/capturas/demo-02-bienvenida-chat.png) | ![Comparación No Country for Old Men con monitor de cuota en vivo](docs/diseno/capturas/demo-04-comparacion-cuota.png) |
+
+| Recomendación con póster y aviso proactivo | Apertura automática en IMDb |
+| --- | --- |
+| ![Recomendación de misterio y suspenso con póster](docs/diseno/capturas/demo-08-recomendacion-poster.png) | ![Apertura automática en IMDb](docs/diseno/capturas/demo-09-imdb.png) |
+
+| Apertura automática en Google Books | Comparación Fight Club con veredicto y póster |
+| --- | --- |
+| ![Apertura automática en Google Books](docs/diseno/capturas/demo-05-google-books.png) | ![Comparación Fight Club con veredicto y póster](docs/diseno/capturas/demo-06-comparacion-fight-club.png) |
+
+| Modo flotante en escritorio | Vista responsiva en tablet (`1024px`) y móvil (`390px`) |
+| --- | --- |
+| ![Modo flotante en escritorio](docs/diseno/capturas/03-flotante-desktop.jpg) | ![Vista responsiva en tablet (1024px)](docs/diseno/capturas/04-tablet-1024.jpg) |
+
 ![Vista responsiva en móvil (390px)](docs/diseno/capturas/05-movil-390.jpg)
-````
 
 ### Capacidades funcionales del agente
 
