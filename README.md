@@ -1,9 +1,9 @@
-# Mook — Selma (AGIChat)
+# Mook — Selma
 
 [![CI](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/ci.yml)
 [![Release](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/release.yml/badge.svg)](https://github.com/AI-Engineering-Creativity-2026/Proyecto-1/actions/workflows/release.yml)
 
-Sistema multiagente de recomendación de cine y comparación película-vs-libro (**Mook / Selma**), construido sobre la evolución del widget embebible **AGIChat**. Permite conversar en tiempo real mediante WebSocket, recomendar películas con póster vía **The Movie Database (TMDB)**, comparar adaptaciones con su libro original vía **Google Books**, abrir enlaces de referencia en **IMDb** y **Google Books** automáticamente tras validar una allowlist estricta, y proteger al agente contra ataques **OWASP LLM01** y **LLM07**, todo respaldado por servidores **MCP** independientes y un servidor backend con contexto de conversación acotado en memoria.
+Sistema multiagente de recomendación de cine y comparación película-vs-libro (**Mook / Selma**), construido sobre la evolución del widget embebible **AGIChat** (disponible en la rama *Proyecto 1*). Permite conversar en tiempo real mediante WebSocket, recomendar películas con póster vía **The Movie Database (TMDB)**, comparar adaptaciones con su libro original vía **Google Books**, abrir enlaces de referencia en **IMDb** y **Google Books** automáticamente tras validar una allowlist estricta, y proteger al agente contra ataques **OWASP LLM01** y **LLM07**, todo respaldado por servidores **MCP** independientes y un servidor backend con contexto de conversación acotado en memoria.
 
 ![Landing principal de Mook — Selma](docs/diseno/capturas/demo-01-landing.png)
 
@@ -107,6 +107,16 @@ Más detalle en [`server/README.md`](server/README.md) y [`evals/README.md`](eva
 | Recomendación con póster y aviso proactivo | Apertura automática en IMDb |
 | --- | --- |
 | ![Recomendación de misterio y suspenso con póster](docs/diseno/capturas/demo-08-recomendacion-poster.png) | ![Apertura automática en IMDb](docs/diseno/capturas/demo-09-imdb.png) |
+
+#### Modos de respuesta (degradación controlada)
+
+| Respuesta Completa (Groq + TMDB + Google Books) | Respuesta Parcial (Fallback TMDB + Google Books) | Respuesta Básica (Fallback Google Books) |
+| --- | --- | --- |
+| ![Respuesta Completa](docs/diseno/capturas/Respuesta%20Completa.png) | ![Respuesta Parcial](docs/diseno/capturas/Respuesta%20Parcial.png) | ![Respuesta Básica](docs/diseno/capturas/Respuesta%20B%C3%A1sica.png) |
+
+- **Respuesta Completa:** generada por `OrchestratorAgent` + `ComparisonAgent` con **Groq** cuando hay cuota disponible; evalúa los 4 criterios con evidencia real de TMDB y Google Books, emite el veredicto (`Vale la pena verla` / `No vale la pena verla`), muestra el póster y dispara la apertura de enlaces.
+- **Respuesta Parcial:** entra automáticamente vía `DemoFallbackAgent` si Groq alcanza su límite de cuota (`429`); consulta directamente `tmdb-mcp` y `books-mcp` para mantener el póster, la sinopsis de TMDB, el autor de Google Books y el veredicto sin interrumpir la sesión.
+- **Respuesta Básica:** respaldo mínimo de `DemoFallbackAgent` cuando además no hay coincidencia exacta en TMDB para la frase buscada; conserva la tabla comparativa con los datos del libro y autor desde Google Books y su atribución oficial.
 
 ### Capacidades funcionales del agente
 
